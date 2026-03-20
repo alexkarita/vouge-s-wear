@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} — Vogue's Wear</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-black text-white px-8 py-4 flex justify-between items-center">
+        <a href="/" class="text-2xl font-bold tracking-widest">VOGUE'S WEAR</a>
+        <div class="flex gap-8 text-sm">
+            <a href="/" class="hover:text-gray-300">Home</a>
+            <a href="/shop" class="hover:text-gray-300">Shop</a>
+            <a href="/cart" class="hover:text-gray-300">
+                Cart
+                {% set cart = session.get('cart', {}) %}
+                {% if cart %}
+                <span class="bg-white text-black text-xs rounded-full px-2 py-0.5 ml-1">
+                    {{ cart|length }}
+                </span>
+                {% endif %}
+            </a>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto px-4 py-12">
+
+        <a href="/shop" class="text-sm text-gray-500 hover:text-black mb-8 inline-block">
+            ← Back to Shop
+        </a>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+            <!-- Product Image -->
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                {% if product.image_url %}
+                <img src="{{ product.image_url }}"
+                     alt="{{ product.name }}"
+                     class="w-full h-96 object-cover">
+                {% else %}
+                <div class="w-full h-96 bg-gray-100 flex flex-col items-center justify-center">
+                    <p class="text-gray-300 text-lg font-semibold">{{ product.name }}</p>
+                    <p class="text-gray-200 text-sm mt-2">Image coming soon</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Product Info -->
+            <div class="flex flex-col justify-center">
+
+                <div class="flex gap-2 mb-4">
+                    <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full capitalize">
+                        {{ product.category }}
+                    </span>
+                    <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full capitalize">
+                        {{ product.gender }}
+                    </span>
+                </div>
+
+                <h1 class="text-3xl font-bold mb-4">{{ product.name }}</h1>
+
+                <div class="mb-6">
+                    {% if product.sale_price %}
+                    <span class="text-2xl font-bold text-red-600">
+                        KES {{ "{:,}".format(product.sale_price) }}
+                    </span>
+                    <span class="text-gray-400 line-through ml-2">
+                        KES {{ "{:,}".format(product.price) }}
+                    </span>
+                    {% else %}
+                    <span class="text-2xl font-bold">
+                        KES {{ "{:,}".format(product.price) }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="text-gray-600 mb-8 leading-relaxed">{{ product.description }}</p>
+
+                <!-- Add to Cart Form -->
+                <form action="/cart/add/{{ product.id }}" method="POST">
+
+                    <!-- Size selector -->
+                    {% if product.size_list() %}
+                    <div class="mb-6">
+                        <p class="text-sm font-semibold mb-3">Select Size</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for size in product.size_list() %}
+                            <label class="cursor-pointer">
+                                <input type="radio" name="size" value="{{ size }}"
+                                       class="hidden peer" {% if loop.first %}checked{% endif %}>
+                                <span class="px-4 py-2 border border-gray-300 rounded-lg text-sm
+                                             peer-checked:bg-black peer-checked:text-white peer-checked:border-black
+                                             hover:border-black transition block">
+                                    {{ size }}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Stock warning -->
+                    {% if product.stock <= 3 and product.stock > 0 %}
+                    <p class="text-red-500 text-sm font-semibold mb-4">
+                        Only {{ product.stock }} left — order soon!
+                    </p>
+                    {% endif %}
+
+                    <!-- Add to Cart button -->
+                    {% if product.stock > 0 %}
+                    <button type="submit"
+                            class="bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition w-full mb-3">
+                        Add to Cart
+                    </button>
+                    {% else %}
+                    <button disabled
+                            class="bg-gray-300 text-gray-500 py-4 rounded-xl font-semibold w-full mb-3 cursor-not-allowed">
+                        Out of Stock
+                    </button>
+                    {% endif %}
+
+                </form>
+
+                <!-- WhatsApp button -->
+                <a href="https://wa.me/254700000000?text=Hi! I want to order {{ product.name }} — KES {{ product.price }}"
+                   target="_blank"
+                   class="bg-green-500 text-white py-4 rounded-xl font-semibold hover:bg-green-600 transition w-full text-center block">
+                    Order via WhatsApp
+                </a>
+
+                <!-- Delivery info -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-500">
+                    <p>Delivery: Nairobi KES 200 · Nearby counties KES 300 · Coast & Western KES 500 · Rest of Kenya KES 700</p>
+                    <p class="mt-1">Payment: M-Pesa</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Complete the Look -->
+        {% if related %}
+        <div class="mt-16">
+            <h2 class="text-2xl font-bold mb-2">Complete the Look</h2>
+            <p class="text-gray-400 text-sm mb-6">You might also like these</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+                {% for product in related %}
+                <a href="/product/{{ product.id }}"
+                   class="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition block">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}"
+                         alt="{{ product.name }}"
+                         class="w-full h-40 object-cover group-hover:scale-105 transition duration-300">
+                    {% else %}
+                    <div class="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-300 text-xs text-center p-2">
+                        {{ product.name }}
+                    </div>
+                    {% endif %}
+                    <div class="p-3">
+                        <p class="font-semibold text-sm truncate">{{ product.name }}</p>
+                        <p class="text-gray-400 text-xs mt-1">
+                            KES {{ "{:,}".format(product.price) }}
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 text-center py-8 text-sm mt-10">
+        Vogue's Wear &copy; 2025 — Alex Karita — Nairobi, Kenya
+    </footer>
+
+</body>
+</html>

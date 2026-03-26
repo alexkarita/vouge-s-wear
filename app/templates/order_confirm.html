@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order #{{ order.order_number }} Confirmed — Vogue's Wear</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <nav class="bg-black text-white px-8 py-4 flex justify-between items-center">
+        <a href="{{ url_for('main.index') }}" class="text-2xl font-bold tracking-widest">VOGUE'S WEAR</a>
+        <div class="flex gap-8 text-sm">
+            <a href="{{ url_for('main.index') }}" class="hover:text-gray-300">Home</a>
+            <a href="{{ url_for('main.shop') }}" class="hover:text-gray-300">Shop</a>
+            <a href="{{ url_for('main.cart') }}" class="hover:text-gray-300">Cart</a>
+        </div>
+    </nav>
+
+    <div class="max-w-lg mx-auto px-4 py-16 text-center">
+
+        <div id="status-icon" class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-8">
+            <svg id="icon-svg" class="w-10 h-10 text-blue-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+
+        <h1 id="main-title" class="text-3xl font-bold mb-4">Processing Payment...</h1>
+        <p id="status-desc" class="text-gray-500 mb-8">
+            Please check your phone for the M-Pesa PIN prompt.
+        </p>
+
+        <div id="payment-alert" class="hidden mb-6 p-4 rounded-xl text-sm font-semibold"></div>
+
+        <div class="bg-white rounded-2xl shadow-sm p-6 text-left mb-6 border border-gray-100">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Order Summary</h3>
+            <div class="flex justify-between mb-2">
+                <span class="text-gray-600">Total Amount:</span>
+                <span class="font-bold text-black text-lg">KES {{ "{:,}".format(order.total) }}</span>
+            </div>
+            <div class="text-sm text-gray-500">
+                Delivery to: {{ order.delivery_address }}, {{ order.county|title }}
+            </div>
+        </div>
+
+        <div id="retry-container" class="hidden space-y-4">
+            <p class="text-sm text-red-600">Would you like to try again with a different number or after topping up?</p>
+            <a href="{{ url_for('main.checkout') }}" 
+               class="bg-yellow-500 text-white px-10 py-4 rounded-full font-semibold hover:bg-yellow-600 transition shadow-lg inline-block w-full">
+               Try Payment Again
+            </a>
+        </div>
+
+        <a href="{{ url_for('main.shop') }}"
+           class="bg-black text-white px-10 py-4 rounded-full font-semibold hover:bg-gray-800 transition shadow-lg inline-block mt-4">
+            Continue Shopping
+        </a>
+
+    </div>
+
+    <footer class="bg-gray-900 text-gray-400 text-center py-8 text-sm mt-10">
+        Vogue's Wear &copy; 2026 — Nairobi, Kenya
+    </footer>
+
+    <script>
+        function checkStatus() {
+            fetch("/api/get-status/{{ order.order_number }}")
+                .then(res => res.json())
+                .then(data => {
+                    const icon = document.getElementById('status-icon');
+                    const iconSvg = document.getElementById('icon-svg');
+                    const title = document.getElementById('main-title');
+                    const desc = document.getElementById('status-desc');
+                    const alertDiv = document.getElementById('payment-alert');
+                    const retryBtn = document.getElementById('retry-container');
+
+                    if (data.status === 'paid') {
+                        // SUCCESS UI
+                        icon.className = "w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8";
+                        iconSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
+                        iconSvg.className = "w-10 h-10 text-green-500";
+                        title.innerText = "Order Paid Successfully!";
+                        desc.innerHTML = `Receipt: <strong>${data.receipt}</strong>. We are preparing your shipment!`;
+                        clearInterval(pollInterval);
+                    } 
+                    else if (data.status === 'insufficient_funds' || data.status === 'cancelled' || data.status === 'failed' || data.status === 'timeout') {
+                        // FAILURE UI
+                        icon.className = "w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-8";
+                        iconSvg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+                        iconSvg.className = "w-10 h-10 text-red-500";
+                        title.innerText = "Payment Failed";
+                        
+                        alertDiv.classList.remove('hidden');
+                        alertDiv.classList.add('bg-red-50', 'text-red-700');
+                        alertDiv.innerText = "Reason: " + data.status.replace('_', ' ').toUpperCase();
+                        
+                        retryBtn.classList.remove('hidden');
+                        clearInterval(pollInterval);
+                    }
+                });
+        }
+
+        // Check every 3 seconds
+        const pollInterval = setInterval(checkStatus, 3000);
+    </script>
+
+</body>
+</html>

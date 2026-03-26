@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout — Vogue's Wear</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-black text-white px-8 py-4 flex justify-between items-center">
+        <a href="/" class="text-2xl font-bold tracking-widest">VOGUE'S WEAR</a>
+        <div class="flex gap-8 text-sm">
+            <a href="/" class="hover:text-gray-300">Home</a>
+            <a href="/shop" class="hover:text-gray-300">Shop</a>
+            <a href="/cart" class="hover:text-gray-300">Cart</a>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 py-12">
+
+        <h1 class="text-3xl font-bold mb-8">Checkout</h1>
+
+        <form action="/checkout" method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Left — Customer Details Form -->
+                <div class="md:col-span-2 space-y-6">
+
+                    <!-- Personal Info -->
+                    <div class="bg-white rounded-2xl shadow-sm p-6">
+                        <h2 class="text-lg font-bold mb-6">Your Details</h2>
+
+                        <!-- Full Name -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold mb-2">
+                                Full Name
+                            </label>
+                            <input type="text"
+                                   name="customer_name"
+                                   placeholder="e.g. John Doe"
+                                   value="{{ form.customer_name.data or '' }}"
+                                   class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition">
+                            {% if form.customer_name.errors %}
+                                {% for error in form.customer_name.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold mb-2">
+                                Phone Number (M-Pesa)
+                            </label>
+                            <input type="text"
+                                   name="phone"
+                                   placeholder="e.g. 0712345678"
+                                   value="{{ form.phone.data or '' }}"
+                                   class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition">
+                            {% if form.phone.errors %}
+                                {% for error in form.phone.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    <!-- Delivery Info -->
+                    <div class="bg-white rounded-2xl shadow-sm p-6">
+                        <h2 class="text-lg font-bold mb-6">Delivery Details</h2>
+
+                        <!-- Delivery Address -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold mb-2">
+                                Delivery Address
+                            </label>
+                            <input type="text"
+                                   name="delivery_address"
+                                   placeholder="e.g. Westlands, near Sarit Centre"
+                                   value="{{ form.delivery_address.data or '' }}"
+                                   class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition">
+                            {% if form.delivery_address.errors %}
+                                {% for error in form.delivery_address.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <!-- County -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold mb-2">
+                                County
+                            </label>
+                            <select name="county"
+                                    onchange="updateDelivery(this.value)"
+                                    class="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition">
+                                {% for value, label in form.county.choices %}
+                                <option value="{{ value }}"
+                                    {% if form.county.data == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Right — Order Summary -->
+                <div class="md:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-sm p-6 sticky top-24">
+                        <h2 class="text-lg font-bold mb-6">Order Summary</h2>
+
+                        <!-- Cart Items -->
+                        <div class="space-y-3 mb-6">
+                            {% for item in cart_items %}
+                            <div class="flex justify-between text-sm">
+                                <div>
+                                    <p class="font-semibold truncate w-36">{{ item.product.name }}</p>
+                                    <p class="text-gray-400 text-xs">
+                                        Qty {{ item.quantity }}
+                                        {% if item.size %} · Size {{ item.size }}{% endif %}
+                                    </p>
+                                </div>
+                                <p class="font-semibold">
+                                    KES {{ "{:,}".format(item.item_total) }}
+                                </p>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Totals -->
+                        <div class="border-t pt-4 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Subtotal</span>
+                                <span class="font-semibold">
+                                    KES {{ "{:,}".format(subtotal) }}
+                                </span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Delivery</span>
+                                <span class="font-semibold" id="delivery-fee">
+                                    KES {{ "{:,}".format(delivery_fee) }}
+                                </span>
+                            </div>
+                            <div class="border-t pt-2 flex justify-between">
+                                <span class="font-bold">Total</span>
+                                <span class="font-bold" id="total">
+                                    KES {{ "{:,}".format(total) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit"
+                                class="bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition w-full mt-6">
+                            Place Order
+                        </button>
+
+                        <a href="/cart"
+                           class="text-center text-sm text-gray-400 hover:text-black block mt-4">
+                            ← Back to Cart
+                        </a>
+
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 text-center py-8 text-sm mt-10">
+        Vogue's Wear &copy; 2025 — Alex Karita — Nairobi, Kenya
+    </footer>
+
+    <script>
+        const subtotal = {{ subtotal }};
+
+        function updateDelivery(county) {
+            const fee   = county === 'nairobi' ? 200 : 400;
+            const total = subtotal + fee;
+            document.getElementById('delivery-fee').textContent =
+                'KES ' + fee.toLocaleString();
+            document.getElementById('total').textContent =
+                'KES ' + total.toLocaleString();
+        }
+    </script>
+
+</body>
+</html>

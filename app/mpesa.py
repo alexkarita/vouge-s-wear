@@ -53,7 +53,7 @@ def send_stk_push(phone, amount, order_number):
         "PartyA": phone, # Customer phone (must start with 254)
         "PartyB": shortcode,
         "PhoneNumber": phone,
-        "CallBackURL": "https://elidible-ungroundable-cheryll.ngrok-free.app/mpesa/callback", # We will build this listener next
+        "CallBackURL": "https://elidible-ungroundable-cheryll.ngrok-free.dev/mpesa/callback", # We will build this listener next
         "AccountReference": order_number,
         "TransactionDesc": f"Vogues Wear Order {order_number}"
     }

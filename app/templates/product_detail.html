@@ -5,20 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ product.name }} — Vogue's Wear</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .active-thumb { border-color: black !important; opacity: 1 !important; transform: scale(1.05); }
+        .thumb-scroll::-webkit-scrollbar { height: 4px; }
+        .thumb-scroll::-webkit-scrollbar-thumb { background: #000; border-radius: 10px; }
+        #main-display-image { transition: opacity 0.2s ease-in-out; }
+    </style>
 </head>
 <body class="bg-gray-50">
 
-    <!-- Navbar -->
     <nav class="bg-black text-white px-8 py-4 flex justify-between items-center">
-        <a href="/" class="text-2xl font-bold tracking-widest">VOGUE'S WEAR</a>
-        <div class="flex gap-8 text-sm">
-            <a href="/" class="hover:text-gray-300">Home</a>
-            <a href="/shop" class="hover:text-gray-300">Shop</a>
-            <a href="/cart" class="hover:text-gray-300">
+        <a href="/" class="text-2xl font-bold tracking-widest uppercase italic">VOGUE'S WEAR</a>
+        <div class="flex gap-8 text-sm font-bold uppercase tracking-widest">
+            <a href="/" class="hover:text-gray-300 transition">Home</a>
+            <a href="/shop" class="hover:text-gray-300 transition">Shop</a>
+            <a href="/cart" class="hover:text-gray-300 transition flex items-center">
                 Cart
                 {% set cart = session.get('cart', {}) %}
                 {% if cart %}
-                <span class="bg-white text-black text-xs rounded-full px-2 py-0.5 ml-1">
+                <span class="bg-white text-black text-[10px] rounded-full px-2 py-0.5 ml-2 shadow-lg">
                     {{ cart|length }}
                 </span>
                 {% endif %}
@@ -26,74 +31,80 @@
         </div>
     </nav>
 
-    <div class="max-w-5xl mx-auto px-4 py-12">
-
-        <a href="/shop" class="text-sm text-gray-500 hover:text-black mb-8 inline-block">
+    <div class="max-w-6xl mx-auto px-4 py-12">
+        <a href="/shop" class="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-black mb-8 inline-block transition">
             ← Back to Shop
         </a>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div class="space-y-6">
+                <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+                    {% if product.image_url %}
+                    <img id="main-display-image" src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                         alt="{{ product.name }}"
+                         class="w-full h-[550px] object-cover">
+                    {% else %}
+                    <div class="w-full h-[550px] bg-gray-100 flex flex-col items-center justify-center">
+                        <p class="text-gray-300 text-lg font-semibold italic">No Image Available</p>
+                    </div>
+                    {% endif %}
+                </div>
 
-            <!-- Product Image -->
-            <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                {% if product.image_url %}
-                <img src="{{ product.image_url }}"
-                     alt="{{ product.name }}"
-                     class="w-full h-96 object-cover">
-                {% else %}
-                <div class="w-full h-96 bg-gray-100 flex flex-col items-center justify-center">
-                    <p class="text-gray-300 text-lg font-semibold">{{ product.name }}</p>
-                    <p class="text-gray-200 text-sm mt-2">Image coming soon</p>
+                {% if product.images %}
+                <div class="flex gap-4 overflow-x-auto pb-4 thumb-scroll">
+                    {% for img in product.images %}
+                    <img src="{{ url_for('static', filename='uploads/' + img.url) }}" 
+                         onclick="updateMainImage(this)"
+                         class="w-24 h-24 object-cover rounded-2xl cursor-pointer border-2 transition hover:opacity-100 gallery-thumb 
+                         {% if img.url == product.image_url %} active-thumb border-black {% else %} border-transparent opacity-60 {% endif %}">
+                    {% endfor %}
                 </div>
                 {% endif %}
             </div>
 
-            <!-- Product Info -->
-            <div class="flex flex-col justify-center">
-
-                <div class="flex gap-2 mb-4">
-                    <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full capitalize">
+            <div class="flex flex-col justify-start pt-4">
+                <div class="flex gap-2 mb-6">
+                    <span class="bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full">
                         {{ product.category }}
                     </span>
-                    <span class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full capitalize">
+                    <span class="bg-gray-200 text-gray-800 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full">
                         {{ product.gender }}
                     </span>
                 </div>
 
-                <h1 class="text-3xl font-bold mb-4">{{ product.name }}</h1>
+                <h1 class="text-5xl font-black italic uppercase tracking-tighter mb-4 leading-none">{{ product.name }}</h1>
 
-                <div class="mb-6">
+                <div class="mb-8">
                     {% if product.sale_price %}
-                    <span class="text-2xl font-bold text-red-600">
+                    <span class="text-3xl font-black text-red-600">
                         KES {{ "{:,}".format(product.sale_price) }}
                     </span>
-                    <span class="text-gray-400 line-through ml-2">
+                    <span class="text-gray-300 line-through ml-3 text-xl">
                         KES {{ "{:,}".format(product.price) }}
                     </span>
                     {% else %}
-                    <span class="text-2xl font-bold">
+                    <span class="text-3xl font-black">
                         KES {{ "{:,}".format(product.price) }}
                     </span>
                     {% endif %}
                 </div>
 
-                <p class="text-gray-600 mb-8 leading-relaxed">{{ product.description }}</p>
+                <p class="text-gray-500 mb-10 text-lg leading-relaxed font-medium italic border-l-4 border-gray-100 pl-6">
+                    "{{ product.description }}"
+                </p>
 
-                <!-- Add to Cart Form -->
-                <form action="/cart/add/{{ product.id }}" method="POST">
-
-                    <!-- Size selector -->
+                <form action="/cart/add/{{ product.id }}" method="POST" class="space-y-8">
                     {% if product.size_list() %}
-                    <div class="mb-6">
-                        <p class="text-sm font-semibold mb-3">Select Size</p>
-                        <div class="flex flex-wrap gap-2">
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Select Size</p>
+                        <div class="flex flex-wrap gap-3">
                             {% for size in product.size_list() %}
                             <label class="cursor-pointer">
                                 <input type="radio" name="size" value="{{ size }}"
                                        class="hidden peer" {% if loop.first %}checked{% endif %}>
-                                <span class="px-4 py-2 border border-gray-300 rounded-lg text-sm
+                                <span class="px-6 py-3 border-2 border-gray-100 rounded-2xl text-sm font-black uppercase
                                              peer-checked:bg-black peer-checked:text-white peer-checked:border-black
-                                             hover:border-black transition block">
+                                             hover:border-black transition-all block">
                                     {{ size }}
                                 </span>
                             </label>
@@ -102,80 +113,140 @@
                     </div>
                     {% endif %}
 
-                    <!-- Stock warning -->
-                    {% if product.stock <= 3 and product.stock > 0 %}
-                    <p class="text-red-500 text-sm font-semibold mb-4">
-                        Only {{ product.stock }} left — order soon!
-                    </p>
-                    {% endif %}
-
-                    <!-- Add to Cart button -->
                     {% if product.stock > 0 %}
-                    <button type="submit"
-                            class="bg-black text-white py-4 rounded-xl font-semibold hover:bg-gray-800 transition w-full mb-3">
-                        Add to Cart
-                    </button>
+                    <div class="space-y-3">
+                        <button type="submit"
+                                class="bg-black text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] hover:bg-gray-800 transition shadow-2xl w-full text-sm">
+                            Add to Cart
+                        </button>
+                        
+                        <a href="https://wa.me/254700000000?text=Hi! I want to order {{ product.name }} — KES {{ product.price }}"
+                           target="_blank"
+                           class="bg-green-500 text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] hover:bg-green-600 transition w-full text-center block text-xs shadow-xl">
+                            Order via WhatsApp
+                        </a>
+                    </div>
                     {% else %}
                     <button disabled
-                            class="bg-gray-300 text-gray-500 py-4 rounded-xl font-semibold w-full mb-3 cursor-not-allowed">
+                            class="bg-gray-100 text-gray-300 py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] w-full text-sm cursor-not-allowed">
                         Out of Stock
                     </button>
                     {% endif %}
-
                 </form>
 
-                <!-- WhatsApp button -->
-                <a href="https://wa.me/254700000000?text=Hi! I want to order {{ product.name }} — KES {{ product.price }}"
-                   target="_blank"
-                   class="bg-green-500 text-white py-4 rounded-xl font-semibold hover:bg-green-600 transition w-full text-center block">
-                    Order via WhatsApp
-                </a>
-
-                <!-- Delivery info -->
-                <div class="mt-6 p-4 bg-gray-50 rounded-xl text-sm text-gray-500">
-                    <p>Delivery: Nairobi KES 200 · Nearby counties KES 300 · Coast & Western KES 500 · Rest of Kenya KES 700</p>
-                    <p class="mt-1">Payment: M-Pesa</p>
+                <div class="mt-12 p-8 border border-gray-100 rounded-[3rem] bg-white shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 text-5xl italic font-black">AI</div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-2xl">✨</span>
+                        <h5 class="font-black uppercase italic tracking-widest text-sm">Vogue's AI Stylist</h5>
+                    </div>
+                    
+                    <button id="ask-ai-btn" class="text-[10px] bg-black text-white px-6 py-3 rounded-full hover:bg-gray-800 transition duration-300 font-black uppercase tracking-widest">
+                        How should I style this?
+                    </button>
+                    
+                    <div id="ai-response" class="mt-6 text-sm text-gray-600 leading-relaxed hidden"></div>
                 </div>
 
+                <div class="mt-8 p-6 bg-gray-100 rounded-3xl text-[10px] font-bold uppercase tracking-widest text-gray-400 space-y-2">
+                    <p>🚚 Delivery: Nairobi KES 200 · Upcountry KES 400</p>
+                    <p>💳 Payment: M-Pesa (Prompt on Checkout)</p>
+                </div>
             </div>
         </div>
 
-        <!-- Complete the Look -->
-        {% if related %}
-        <div class="mt-16">
-            <h2 class="text-2xl font-bold mb-2">Complete the Look</h2>
-            <p class="text-gray-400 text-sm mb-6">You might also like these</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
-                {% for product in related %}
-                <a href="/product/{{ product.id }}"
-                   class="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition block">
-                    {% if product.image_url %}
-                    <img src="{{ product.image_url }}"
-                         alt="{{ product.name }}"
-                         class="w-full h-40 object-cover group-hover:scale-105 transition duration-300">
-                    {% else %}
-                    <div class="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-300 text-xs text-center p-2">
-                        {{ product.name }}
-                    </div>
-                    {% endif %}
-                    <div class="p-3">
-                        <p class="font-semibold text-sm truncate">{{ product.name }}</p>
-                        <p class="text-gray-400 text-xs mt-1">
-                            KES {{ "{:,}".format(product.price) }}
-                        </p>
-                    </div>
-                </a>
-                {% endfor %}
+        <div class="mt-24">
+            <div class="flex flex-col mb-10">
+                <h2 class="text-4xl font-black italic uppercase tracking-tighter">Complete the Look</h2>
+                <div class="flex items-center gap-3 mt-2">
+                    <p id="ai-look-tip" class="text-gray-400 text-xs font-bold uppercase tracking-widest">Analyzing your style...</p>
+                    <div id="ai-look-loading" class="animate-pulse bg-black h-1 w-12 rounded-full"></div>
+                </div>
+            </div>
+
+            <div id="complete-look-grid" class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="animate-pulse bg-gray-200 rounded-[2rem] h-80"></div>
+                <div class="animate-pulse bg-gray-200 rounded-[2rem] h-80"></div>
+                <div class="animate-pulse bg-gray-200 rounded-[2rem] h-80"></div>
+                <div class="animate-pulse bg-gray-200 rounded-[2rem] h-80"></div>
             </div>
         </div>
-        {% endif %}
-
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 text-center py-8 text-sm mt-10">
-        Vogue's Wear &copy; 2025 — Alex Karita — Nairobi, Kenya
+    <footer class="bg-black text-gray-500 text-center py-12 text-[10px] font-black uppercase tracking-[0.5em] mt-20">
+        Vogue's Wear &copy; 2026 — Nairobi, Kenya
     </footer>
 
+    <script>
+        function updateMainImage(el) {
+            const mainImg = document.getElementById('main-display-image');
+            mainImg.style.opacity = '0';
+            setTimeout(() => {
+                mainImg.src = el.src;
+                mainImg.style.opacity = '1';
+            }, 200);
+
+            document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+                thumb.classList.remove('active-thumb', 'border-black');
+                thumb.classList.add('border-transparent', 'opacity-60');
+            });
+            el.classList.add('active-thumb', 'border-black');
+            el.classList.remove('border-transparent', 'opacity-60');
+        }
+
+        document.getElementById('ask-ai-btn').addEventListener('click', function() {
+            const responseDiv = document.getElementById('ai-response');
+            const btn = this;
+            responseDiv.classList.remove('hidden');
+            responseDiv.innerHTML = '<div class="flex items-center gap-2"><div class="animate-spin rounded-full h-3 w-3 border-b-2 border-black"></div><span class="text-[10px] font-black uppercase tracking-widest">Consulting Stylist...</span></div>';
+            btn.disabled = true;
+
+            fetch('/api/ai-advice/{{ product.id }}')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        responseDiv.innerHTML = `<div class="bg-gray-50 p-6 rounded-2xl border-l-8 border-black italic text-gray-700 font-medium">"${data.advice}"</div>`;
+                    } else {
+                        responseDiv.innerHTML = '<span class="text-red-500 font-black uppercase text-[10px]">Stylist is offline.</span>';
+                    }
+                })
+                .finally(() => { btn.disabled = false; });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const grid = document.getElementById('complete-look-grid');
+            const tipElement = document.getElementById('ai-look-tip');
+            const loader = document.getElementById('ai-look-loading');
+
+            fetch('/api/complete-look/{{ product.id }}')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success && data.products.length > 0) {
+                        tipElement.innerHTML = `✨ ${data.tip}`;
+                        grid.innerHTML = ''; 
+                        data.products.forEach(item => {
+                            // FIXED: Ensure the API path for images also includes /static/uploads/
+                            let imageSrc = item.image ? `/static/uploads/${item.image}` : '/static/placeholder.jpg';
+                            grid.innerHTML += `
+                                <a href="/product/${item.id}" class="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all border border-gray-100 block">
+                                    <div class="overflow-hidden">
+                                        <img src="${imageSrc}" 
+                                             class="w-full h-64 object-cover group-hover:scale-110 transition duration-700">
+                                    </div>
+                                    <div class="p-6">
+                                        <p class="font-black text-xs text-gray-900 uppercase italic tracking-tighter truncate">${item.name}</p>
+                                        <div class="flex items-center justify-between mt-3">
+                                            <p class="text-black font-bold text-sm">KES ${item.price.toLocaleString()}</p>
+                                            <span class="text-[8px] font-black bg-gray-100 px-3 py-1 rounded-full text-gray-500 uppercase">View</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            `;
+                        });
+                    }
+                })
+                .finally(() => { if(loader) loader.classList.add('hidden'); });
+        });
+    </script>
 </body>
 </html>

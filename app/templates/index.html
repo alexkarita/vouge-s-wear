@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative bg-black text-white py-32 px-4 overflow-hidden">
+    <div class="max-w-7xl mx-auto relative z-10 text-center">
+        <p class="text-[10px] font-bold uppercase tracking-[0.5em] mb-6 text-gray-400">Clothes & Shoes — Men & Women — Nairobi, Kenya</p>
+        <h1 class="text-6xl md:text-8xl font-black italic uppercase tracking-tighter mb-8 leading-none">
+            Dress Like <br> <span class="text-yellow-400">You Mean It</span>
+        </h1>
+        <p class="text-gray-400 max-w-xl mx-auto mb-10 font-medium">Premium fashion delivered across Kenya. Curated for the bold, the urban, and the stylish.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{{ url_for('main.shop') }}" class="bg-white text-black px-10 py-4 rounded-full font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition">Shop Now</a>
+            <a href="{{ url_for('main.shop', category='Shoes') }}" class="border border-white text-white px-10 py-4 rounded-full font-black uppercase text-xs tracking-widest hover:bg-white hover:text-black transition">View Shoes</a>
+        </div>
+    </div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-yellow-400/10 rounded-full blur-[120px]"></div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 py-24">
+    <div class="flex justify-between items-end mb-12">
+        <div>
+            <h2 class="text-4xl font-black uppercase italic leading-none mb-2">Featured Products</h2>
+            <div class="h-1 w-20 bg-black"></div>
+        </div>
+        <a href="{{ url_for('main.shop') }}" class="text-[10px] font-bold uppercase tracking-widest border-b-2 border-black pb-1 hover:text-gray-500 hover:border-gray-500 transition">View all &rarr;</a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+        {% for product in products %}
+        <div class="group">
+            <a href="{{ url_for('main.product_detail', product_id=product.id) }}" class="block relative aspect-[3/4] overflow-hidden rounded-2xl mb-4 bg-gray-100">
+                {% if product.image_url %}
+                <img src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                     alt="{{ product.name }}"
+                     class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center text-gray-300 italic text-xs">No Image</div>
+                {% endif %}
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span class="bg-white text-black text-[10px] font-bold px-6 py-3 rounded-full uppercase tracking-widest transform translate-y-4 group-hover:translate-y-0 transition-transform">View Details</span>
+                </div>
+            </a>
+            <div class="px-2">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{{ product.category }} · {{ product.gender }}</p>
+                <h3 class="font-bold text-sm uppercase mb-2">{{ product.name }}</h3>
+                <div class="flex justify-between items-center">
+                    {% if product.sale_price %}
+                    <div>
+                        <span class="font-black text-sm text-red-600">KES {{ "{:,}".format(product.sale_price|int) }}</span>
+                        <span class="text-gray-400 line-through text-xs ml-1">KES {{ "{:,}".format(product.price|int) }}</span>
+                    </div>
+                    {% else %}
+                    <p class="font-black text-sm">KES {{ "{:,}".format(product.price|int) }}</p>
+                    {% endif %}
+                    <form action="{{ url_for('main.add_to_cart', product_id=product.id) }}" method="POST">
+                        <button type="submit" class="text-[10px] font-bold uppercase tracking-tighter bg-black text-white px-3 py-1 rounded-md hover:bg-yellow-400 hover:text-black transition">
+                            + Cart
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full text-center py-20 border-2 border-dashed border-gray-200 rounded-3xl">
+            <p class="text-gray-400 font-medium italic">No products found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

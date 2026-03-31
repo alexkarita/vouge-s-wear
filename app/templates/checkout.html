@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-16">
+
+    <div class="mb-10">
+        <h1 class="text-4xl font-black italic uppercase tracking-tight leading-none">Checkout</h1>
+        <div class="h-1 w-16 bg-black mt-2"></div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="mb-6 p-4 rounded-2xl text-sm font-medium
+                {% if category == 'success' %}bg-green-50 text-green-800 border border-green-200
+                {% elif category == 'danger' %}bg-red-50 text-red-800 border border-red-200
+                {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+        <!-- Checkout Form -->
+        <div class="lg:col-span-2">
+            <form action="{{ url_for('main.checkout') }}" method="POST">
+
+                <!-- Delivery Details -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-6">
+                    <h2 class="font-black text-lg uppercase tracking-tight mb-6">Delivery Details</h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                        <!-- Full Name -->
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Full Name *</label>
+                            <input type="text" name="customer_name" required
+                                   placeholder="e.g. John Kamau"
+                                   class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition">
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">WhatsApp / Phone Number *</label>
+                            <div class="flex gap-2">
+                                <span class="flex items-center px-4 border-2 border-gray-100 rounded-xl text-sm font-bold text-gray-500 bg-gray-50">+254</span>
+                                <input type="tel" name="customer_phone" required
+                                       placeholder="712 345 678"
+                                       class="flex-1 border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition">
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1">We'll send your order confirmation to this number via WhatsApp.</p>
+                        </div>
+
+                        <!-- County -->
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">County *</label>
+                            <select name="county" id="countySelect" required onchange="updateDelivery()"
+                                    class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition bg-white">
+                                <option value="">Select your county</option>
+                                {% for county in counties %}
+                                <option value="{{ county }}">{{ county }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Delivery Fee Display -->
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Delivery Fee</label>
+                            <div class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-black bg-gray-50" id="deliveryFeeDisplay">
+                                Select county above
+                            </div>
+                        </div>
+
+                        <!-- Delivery Address -->
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Delivery Address *</label>
+                            <textarea name="delivery_address" required rows="3"
+                                      placeholder="e.g. Westlands, Mpaka Road, near Shell Petrol Station"
+                                      class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition resize-none"></textarea>
+                            <p class="text-[10px] text-gray-400 mt-1">Be as specific as possible — include estate, road, and a landmark.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-6">
+                    <h2 class="font-black text-lg uppercase tracking-tight mb-6">Payment Method</h2>
+
+                    <div class="border-2 border-black rounded-xl p-5 flex items-center gap-4 bg-green-50">
+                        <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="text-white font-black text-xs">M</span>
+                        </div>
+                        <div>
+                            <p class="font-black text-sm uppercase tracking-tight">M-Pesa</p>
+                            <p class="text-[10px] text-gray-500 mt-1">You will receive an M-Pesa prompt on your phone after placing the order.</p>
+                        </div>
+                        <div class="ml-auto">
+                            <div class="w-5 h-5 rounded-full bg-black flex items-center justify-center">
+                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Place Order Button -->
+                <button type="submit"
+                        class="w-full bg-black text-white font-black text-sm py-5 rounded-2xl uppercase tracking-widest hover:bg-gray-800 transition shadow-lg">
+                    Place Order →
+                </button>
+
+            </form>
+        </div>
+
+        <!-- Order Summary Sidebar -->
+        <div class="lg:col-span-1">
+            <div class="bg-black text-white rounded-2xl p-7 sticky top-6">
+                <h2 class="font-black text-lg uppercase tracking-tight mb-6">Your Order</h2>
+
+                <!-- Items -->
+                <div class="space-y-4 mb-6">
+                    {% for item in cart_items %}
+                    <div class="flex gap-3 items-center">
+                        {% if item.image %}
+                        <img src="{{ url_for('static', filename='uploads/' + item.image) }}"
+                             alt="{{ item.name }}"
+                             class="w-12 h-14 object-cover rounded-lg flex-shrink-0">
+                        {% else %}
+                        <div class="w-12 h-14 bg-gray-700 rounded-lg flex-shrink-0"></div>
+                        {% endif %}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold uppercase truncate">{{ item.name }}</p>
+                            {% if item.size %}<p class="text-[10px] text-gray-400">Size: {{ item.size }}</p>{% endif %}
+                            <p class="text-[10px] text-gray-400">Qty: {{ item.quantity }}</p>
+                        </div>
+                        <p class="text-xs font-black flex-shrink-0">KES {{ "{:,}".format(item.total|int) }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Totals -->
+                <div class="border-t border-gray-700 pt-5 space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Subtotal</span>
+                        <span class="font-bold">KES {{ "{:,}".format(subtotal|int) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Delivery</span>
+                        <span class="font-bold text-yellow-400" id="sidebarDelivery">—</span>
+                    </div>
+                    <div class="border-t border-gray-700 pt-3 flex justify-between">
+                        <span class="font-black uppercase">Total</span>
+                        <span class="font-black text-yellow-400 text-lg" id="sidebarTotal">KES {{ "{:,}".format(subtotal|int) }}</span>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('main.cart') }}"
+                   class="block w-full text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-6 hover:text-white transition">
+                    ← Edit Cart
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// Delivery fees from Flask — passed as JSON
+const deliveryFees = {{ delivery_fees | tojson }};
+const subtotal = {{ subtotal }};
+
+function updateDelivery() {
+    const county = document.getElementById('countySelect').value;
+    const fee = deliveryFees[county] || 400;
+    const total = subtotal + fee;
+
+    document.getElementById('deliveryFeeDisplay').textContent = 'KES ' + fee.toLocaleString();
+    document.getElementById('sidebarDelivery').textContent = 'KES ' + fee.toLocaleString();
+    document.getElementById('sidebarTotal').textContent = 'KES ' + total.toLocaleString();
+}
+</script>
+{% endblock %}

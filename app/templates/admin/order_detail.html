@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-4xl font-black italic uppercase tracking-tight leading-none">Order Detail</h1>
+            <div class="h-1 w-20 bg-black mt-2"></div>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="text-[10px] font-bold uppercase tracking-widest border-b-2 border-black pb-1 hover:text-gray-500 transition">
+            ← Back to Dashboard
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="mb-6 p-4 rounded-2xl text-sm font-medium
+            {% if category == 'success' %}bg-green-50 text-green-800 border border-green-200
+            {% elif category == 'danger' %}bg-red-50 text-red-800 border border-red-200
+            {% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Left: Order Items + Customer Info -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Order Number + Date -->
+            <div class="bg-black text-white rounded-2xl p-6 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Order Number</p>
+                    <p class="text-2xl font-black text-yellow-400">{{ order.order_number }}</p>
+                    <p class="text-xs text-gray-400 mt-1">{{ order.created_at.strftime('%d %B %Y at %I:%M %p') }}</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-bold uppercase px-4 py-2 rounded-full
+                        {% if order.payment_status == 'paid' %}bg-green-500 text-white
+                        {% elif order.payment_status == 'failed' %}bg-red-500 text-white
+                        {% else %}bg-yellow-400 text-black{% endif %}">
+                        {{ order.payment_status }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Items Ordered -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100">
+                    <h2 class="font-black text-lg uppercase tracking-tight">Items Ordered</h2>
+                </div>
+                <div class="divide-y divide-gray-50">
+                    {% for item in items %}
+                    <div class="p-5 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-sm uppercase">{{ item.name }}</p>
+                            <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-1">
+                                {% if item.size %}Size: {{ item.size }} · {% endif %}
+                                Qty: {{ item.quantity }} · KES {{ "{:,}".format(item.price|int) }} each
+                            </p>
+                        </div>
+                        <p class="font-black text-sm">KES {{ "{:,}".format((item.price * item.quantity)|int) }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- Totals -->
+                <div class="p-6 bg-gray-50 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Subtotal</span>
+                        <span class="font-bold">KES {{ "{:,}".format(order.subtotal) }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Delivery ({{ order.county }})</span>
+                        <span class="font-bold">KES {{ "{:,}".format(order.delivery_fee) }}</span>
+                    </div>
+                    <div class="flex justify-between text-base font-black border-t border-gray-200 pt-3">
+                        <span>Total</span>
+                        <span class="text-yellow-600">KES {{ "{:,}".format(order.total) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 class="font-black text-lg uppercase tracking-tight mb-5">Customer & Delivery</h2>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Name</p>
+                        <p class="font-bold">{{ order.customer_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Phone</p>
+                        <p class="font-bold">{{ order.customer_phone }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">County</p>
+                        <p class="font-bold">{{ order.county }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Expected Delivery</p>
+                        <p class="font-bold text-green-600">{{ order.get_delivery_date() }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Delivery Address</p>
+                        <p class="font-bold">{{ order.delivery_address }}</p>
+                    </div>
+                    {% if order.mpesa_receipt %}
+                    <div class="col-span-2">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">M-Pesa Receipt</p>
+                        <p class="font-bold font-mono text-green-600">{{ order.mpesa_receipt }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right: Update Status -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
+                <h2 class="font-black text-lg uppercase tracking-tight mb-6">Update Status</h2>
+
+                <!-- Status Tracker -->
+                <div class="space-y-3 mb-8">
+                    {% set statuses = ['pending', 'packed', 'shipped', 'delivered'] %}
+                    {% set labels = ['Order Placed', 'Packed', 'Shipped', 'Delivered'] %}
+                    {% set icons = ['📋', '📦', '🚀', '✅'] %}
+                    {% for i in range(4) %}
+                    <div class="flex items-center gap-3 p-3 rounded-xl
+                        {% if order.order_status == statuses[i] %}bg-black text-white
+                        {% elif loop.index0 < statuses.index(order.order_status) %}bg-green-50 text-green-700
+                        {% else %}bg-gray-50 text-gray-400{% endif %}">
+                        <span class="text-lg">{{ icons[i] }}</span>
+                        <span class="font-bold text-sm uppercase tracking-wide">{{ labels[i] }}</span>
+                        {% if order.order_status == statuses[i] %}
+                        <span class="ml-auto text-[10px] text-yellow-400 font-bold">CURRENT</span>
+                        {% elif loop.index0 < statuses.index(order.order_status) %}
+                        <span class="ml-auto text-[10px] text-green-600 font-bold">✓ DONE</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Update form -->
+                <form action="{{ url_for('admin.update_order_status', order_id=order.id) }}" method="POST">
+                    <input type="hidden" name="next" value="{{ url_for('admin.order_detail', order_id=order.id) }}">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Change Status</label>
+                    <select name="status" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition bg-white mb-4">
+                        <option value="pending"   {% if order.order_status == 'pending' %}selected{% endif %}>📋 Pending</option>
+                        <option value="packed"    {% if order.order_status == 'packed' %}selected{% endif %}>📦 Packed</option>
+                        <option value="shipped"   {% if order.order_status == 'shipped' %}selected{% endif %}>🚀 Shipped</option>
+                        <option value="delivered" {% if order.order_status == 'delivered' %}selected{% endif %}>✅ Delivered</option>
+                    </select>
+                    <button type="submit"
+                            class="w-full bg-black text-white font-black text-xs py-4 rounded-xl uppercase tracking-widest hover:bg-gray-800 transition">
+                        Update & Notify Customer via WhatsApp →
+                    </button>
+                </form>
+
+                <p class="text-[10px] text-gray-400 text-center mt-3">
+                    Customer will receive a WhatsApp message automatically when status changes.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

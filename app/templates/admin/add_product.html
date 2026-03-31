@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto py-12 px-4">
+    <h1 class="text-3xl font-black uppercase italic mb-8">Add New Product</h1>
+    
+    <form action="{{ url_for('admin.add_product') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="text" name="name" placeholder="Product Name" class="w-full border-b-2 border-black p-2 focus:outline-none" required>
+            <select name="category" class="w-full border-b-2 border-black p-2 outline-none">
+                <option value="Clothes">Clothes</option>
+                <option value="Shoes">Shoes</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <select name="gender" class="w-full border-b-2 border-black p-2 outline-none">
+                <option value="Men">Men</option>
+                <option value="Women">Women</option>
+                <option value="Unisex">Unisex</option>
+            </select>
+            <input type="number" name="price" placeholder="Price (KES)" class="w-full border-b-2 border-black p-2 focus:outline-none" required>
+        </div>
+
+        <input type="text" name="sizes" placeholder="Sizes (e.g. S, M, L or 40, 41, 42)" class="w-full border-b-2 border-black p-2 focus:outline-none">
+        <textarea name="description" placeholder="Product Description" rows="4" class="w-full border-2 border-black p-2 focus:outline-none"></textarea>
+
+        <div class="bg-gray-100 p-6 rounded-xl border-2 border-dashed border-gray-400">
+            <label class="block font-bold text-xs uppercase mb-2 text-gray-500">Upload up to 5 Photos</label>
+            <input type="file" name="photos" multiple accept="image/*" class="text-sm">
+        </div>
+
+        <button type="submit" class="w-full bg-black text-white py-4 font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition">Save Product</button>
+    </form>
+</div>
+{% endblock %}

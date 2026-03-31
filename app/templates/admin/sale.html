@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-10">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <h1 class="text-4xl font-black italic uppercase tracking-tight leading-none">Sales Dashboard</h1>
+            <div class="h-1 w-20 bg-black mt-2"></div>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="text-[10px] font-bold uppercase tracking-widest border-b-2 border-black pb-1 hover:text-gray-500 transition">
+            ← Back to Admin
+        </a>
+    </div>
+
+    <!-- Revenue Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <div class="bg-black text-white rounded-2xl p-6">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2">Today's Revenue</p>
+            <p class="text-3xl font-black text-yellow-400">KES {{ "{:,}".format(revenue_today) }}</p>
+            <p class="text-xs text-gray-400 mt-2">{{ orders_today }} order{{ 's' if orders_today != 1 }}</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2">This Week</p>
+            <p class="text-3xl font-black">KES {{ "{:,}".format(revenue_week) }}</p>
+            <p class="text-xs text-gray-400 mt-2">{{ orders_week }} orders</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2">This Month</p>
+            <p class="text-3xl font-black">KES {{ "{:,}".format(revenue_month) }}</p>
+            <p class="text-xs text-gray-400 mt-2">Last 30 days</p>
+        </div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-2">All Time</p>
+            <p class="text-3xl font-black text-green-600">KES {{ "{:,}".format(revenue_all) }}</p>
+            <p class="text-xs text-gray-400 mt-2">{{ paid_orders }}/{{ total_orders }} orders paid</p>
+        </div>
+    </div>
+
+    <!-- Revenue Chart (last 7 days) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-10">
+        <h2 class="font-black text-lg uppercase tracking-tight mb-6">Revenue — Last 7 Days</h2>
+        {% set max_rev = daily_revenue | map(attribute='revenue') | max %}
+        <div class="flex items-end gap-3 h-40">
+            {% for day in daily_revenue %}
+            <div class="flex-1 flex flex-col items-center gap-2">
+                <p class="text-[10px] font-bold text-gray-500">
+                    {% if day.revenue > 0 %}{{ "{:,}".format(day.revenue) }}{% endif %}
+                </p>
+                <div class="w-full rounded-t-lg transition-all duration-500
+                    {% if day.revenue > 0 %}bg-black{% else %}bg-gray-100{% endif %}"
+                     style="height: {{ ((day.revenue / max_rev * 100) if max_rev > 0 else 0) | int }}%; min-height: 4px">
+                </div>
+                <p class="text-[10px] font-black uppercase">{{ day.day }}</p>
+                <p class="text-[10px] text-gray-400">{{ day.count }} orders</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+
+        <!-- Top Products -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 class="font-black text-lg uppercase tracking-tight mb-6">Most Popular Products</h2>
+            {% if top_products %}
+            <div class="space-y-4">
+                {% for name, count in top_products %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <span class="text-[10px] font-black text-gray-400 w-5">{{ loop.index }}</span>
+                        <p class="font-bold text-sm uppercase truncate">{{ name }}</p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <div class="w-24 bg-gray-100 rounded-full h-2">
+                            <div class="bg-black h-2 rounded-full"
+                                 style="width: {{ ((count / top_products[0][1]) * 100)|int }}%"></div>
+                        </div>
+                        <span class="text-xs font-black w-8 text-right">{{ count }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 italic text-sm">No orders yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Orders by County -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 class="font-black text-lg uppercase tracking-tight mb-6">Orders by County</h2>
+            {% if county_data %}
+            <div class="space-y-4">
+                {% for county, count, revenue in county_data %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <span class="text-[10px] font-black text-gray-400 w-5">{{ loop.index }}</span>
+                        <p class="font-bold text-sm uppercase truncate">{{ county }}</p>
+                    </div>
+                    <div class="flex items-center gap-4 flex-shrink-0">
+                        <span class="text-xs text-gray-400">{{ count }} order{{ 's' if count != 1 }}</span>
+                        <span class="text-xs font-black">KES {{ "{:,}".format(revenue|int) }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 italic text-sm">No orders yet.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Recent Orders Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="font-black text-lg uppercase tracking-tight">Recent 20 Orders</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-6 py-4">Order</th>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-4">Customer</th>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-4">County</th>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-4">Total</th>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-4">Payment</th>
+                        <th class="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-4">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for order in recent_orders %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4">
+                            <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="font-black text-sm text-yellow-600 hover:underline">{{ order.order_number }}</a>
+                            <p class="text-[10px] text-gray-400">{{ order.created_at.strftime('%d %b %Y') }}</p>
+                        </td>
+                        <td class="px-4 py-4">
+                            <p class="font-bold text-sm">{{ order.customer_name }}</p>
+                            <p class="text-[10px] text-gray-400">{{ order.customer_phone }}</p>
+                        </td>
+                        <td class="px-4 py-4"><span class="text-xs font-bold uppercase bg-gray-100 px-3 py-1 rounded-full">{{ order.county }}</span></td>
+                        <td class="px-4 py-4"><p class="font-black text-sm">KES {{ "{:,}".format(order.total) }}</p></td>
+                        <td class="px-4 py-4">
+                            <span class="text-[10px] font-bold uppercase px-3 py-1 rounded-full
+                                {% if order.payment_status == 'paid' %}bg-green-100 text-green-700
+                                {% elif order.payment_status == 'failed' %}bg-red-100 text-red-600
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ order.payment_status }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="text-[10px] font-bold uppercase px-3 py-1 rounded-full
+                                {% if order.order_status == 'delivered' %}bg-green-100 text-green-700
+                                {% elif order.order_status == 'shipped' %}bg-blue-100 text-blue-700
+                                {% elif order.order_status == 'packed' %}bg-purple-100 text-purple-700
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {{ order.order_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="px-6 py-16 text-center text-gray-400 italic">No orders yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

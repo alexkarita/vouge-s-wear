@@ -1,0 +1,1 @@
+from app import create_app, db; from app.models import Product; app = create_app(); with app.app_context(): p = Product(name='Striped Rugby Polo', price=900, description='Premium Cotton', category='clothes', image_url='/static/uploads/striped-rugby-polo.jpg.jpeg'); db.session.add(p); db.session.commit()

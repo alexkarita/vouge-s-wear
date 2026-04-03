@@ -128,7 +128,7 @@
                                       onsubmit="return confirm('Delete {{ product.name }}?')">
                                     <button type="submit" class="text-[10px] font-bold uppercase bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition">Delete</button>
                                 </form>
-                                <form action="{{ url_for('admin.toggle_featured, product_id=product.id) }}" method="POST">
+                                <form action="{{ url_for('admin.toggle_featured', product_id=product.id) }}" method="POST"></form>
                                     <button type="submit" class="text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg hover:bg-yellow-200 transition">
                                         {% if product.is_featured %}Unfeature{% else %}Feature{% endif %}
                                     </button>

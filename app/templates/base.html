@@ -10,36 +10,64 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        
+        /* Smooth transition for the mobile menu */
+        #mobile-menu {
+            transition: all 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-black antialiased">
 
-    <nav class="bg-black text-white py-6 px-4 sticky top-0 z-50 shadow-2xl">
+    <nav class="bg-black text-white py-4 px-4 sticky top-0 z-50 shadow-2xl">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="{{ url_for('main.index') }}" class="text-2xl font-black italic tracking-tighter uppercase">
+            
+            <a href="{{ url_for('main.index') }}" class="text-xl md:text-2xl font-black italic tracking-tighter uppercase">
                 VOGUE'S WEAR
             </a>
             
-            <div class="hidden md:flex space-x-8 items-center">
-                <a href="{{ url_for('main.index') }}" class="text-[10px] font-bold uppercase tracking-widest hover:text-gray-400 transition">Home</a>
-                <a href="{{ url_for('main.shop') }}" class="text-[10px] font-bold uppercase tracking-widest hover:text-gray-400 transition">Shop</a>
+            <div class="flex items-center gap-4">
                 
-                <a href="/admin/add_product" class="bg-yellow-400 text-black px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-yellow-300 transition flex items-center gap-2">
-                    <span>Admin</span>
-                    <div class="w-2 h-2 bg-black rounded-full animate-pulse"></div>
-                </a>
-                
-                <div class="relative cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="hidden md:flex space-x-8 items-center mr-4">
+                    <a href="{{ url_for('main.index') }}" class="text-[10px] font-bold uppercase tracking-widest hover:text-gray-400 transition">Home</a>
+                    <a href="{{ url_for('main.shop') }}" class="text-[10px] font-bold uppercase tracking-widest hover:text-gray-400 transition">Shop</a>
+                    
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <a href="/admin/add_product" class="bg-yellow-400 text-black px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-yellow-300 transition flex items-center gap-2">
+                        <span>Admin</span>
+                        <div class="w-2 h-2 bg-black rounded-full animate-pulse"></div>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <a href="{{ url_for('main.cart') }}" class="relative cursor-pointer p-2 hover:bg-gray-900 rounded-full transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
                     {% if session.get('cart') %}
-                    <span class="absolute -top-2 -right-2 bg-yellow-400 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                    <span class="absolute top-0 right-0 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded-full border-2 border-black">
                         {{ session['cart']|length }}
                     </span>
                     {% endif %}
-                </div>
+                </a>
+
+                <button id="menu-btn" class="md:hidden p-2 hover:bg-gray-900 rounded-lg transition focus:outline-none">
+                    <svg id="menu-icon" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                </button>
             </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden mt-4 space-y-2 border-t border-gray-800 pt-4">
+            <a href="{{ url_for('main.index') }}" class="block px-4 py-4 text-xs font-bold uppercase tracking-widest hover:bg-gray-900 rounded-xl transition">Home</a>
+            <a href="{{ url_for('main.shop') }}" class="block px-4 py-4 text-xs font-bold uppercase tracking-widest hover:bg-gray-900 rounded-xl transition">Shop</a>
+            
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="/admin/add_product" class="block px-4 py-4 bg-yellow-400 text-black text-xs font-black uppercase tracking-widest rounded-xl text-center mx-2">
+                Admin Panel
+            </a>
+            {% endif %}
         </div>
     </nav>
 
@@ -54,6 +82,22 @@
             </p>
         </div>
     </footer>
+
+    <script>
+        const btn = document.getElementById('menu-btn');
+        const menu = document.getElementById('mobile-menu');
+
+        btn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+
+        // Close menu if user clicks outside of it
+        window.addEventListener('click', (e) => {
+            if (!btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
 
 </body>
 </html>

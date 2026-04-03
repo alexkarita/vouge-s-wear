@@ -3,3 +3,7 @@ venv/
 __pycache__/
 instance/
 .env
+*.db
+*.sqlite3
+app/static/uploads/
+.DS_Store

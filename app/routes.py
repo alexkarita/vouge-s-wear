@@ -1,16 +1,18 @@
 import json
 import uuid
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required
 from app import db
 from app.models import Product, ProductImage, User, Order
 
 main = Blueprint('main', __name__)
 
+
 @main.route('/')
 def index():
     products = Product.query.order_by(Product.created_at.desc()).all()
     return render_template('index.html', products=products)
+
 
 @main.route('/shop')
 def shop():
@@ -33,44 +35,20 @@ def shop():
     products = query.order_by(Product.created_at.desc()).all()
     return render_template('shop.html', products=products, category=category, gender=gender)
 
+
 @main.route('/product/<int:product_id>')
 def product_detail(product_id):
     product = Product.query.get_or_404(product_id)
     gallery = ProductImage.query.filter_by(product_id=product.id).all()
     return render_template('product_detail.html', product=product, gallery=gallery)
 
-# --- AI STYLIST ROUTE ---
-@main.route('/ai-stylist/<int:product_id>')
-def ai_stylist(product_id):
-    product = Product.query.get_or_404(product_id)
-    
-    if 'Shoes' in product.category:
-        tip = f"For these {product.name}, I recommend a high-contrast look. Pair them with charcoal cargo pants and a slightly oversized vintage tee."
-    elif 'Clothes' in product.category:
-        tip = f"The {product.name} is a versatile piece. Layer it under a techwear jacket for a Nairobi night out, or keep it simple with distressed denim."
-    else:
-        tip = "Focus on the silhouette. Monochromatic tones (all black or all white) will make this piece pop. Add a minimalist silver chain."
-
-    related = Product.query.filter(Product.id != product_id).limit(4).all()
-    recommendations = []
-    for item in related:
-        recommendations.append({
-            "id": item.id,
-            "name": item.name,
-            "price": item.price,
-            "image_url": item.image_url
-        })
-
-    return jsonify({
-        "styling_tip": tip,
-        "recommendations": recommendations
-    })
 
 @main.route('/cart/add/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
     product = Product.query.get_or_404(product_id)
     cart = session.get('cart', {})
     session.permanent = True
+
     size = request.form.get('size', '')
     cart_key = f"{product_id}_{size}" if size else str(product_id)
     image = product.image_url or ''
@@ -92,6 +70,7 @@ def add_to_cart(product_id):
     flash(f"{product.name} added to cart!", "success")
     return redirect(request.referrer or url_for('main.shop'))
 
+
 @main.route('/cart')
 def cart():
     session.permanent = True
@@ -104,8 +83,7 @@ def cart():
             item_price    = float(item.get('price', 0))
             item_quantity = int(item.get('quantity', 1))
             item_total    = item_price * item_quantity
-            subtotal      += item_total
-
+            subtotal     += item_total
             cart_items.append({
                 'cart_key':   cart_key,
                 'product_id': item.get('product_id', cart_key.split('_')[0]),
@@ -121,12 +99,14 @@ def cart():
 
     return render_template('cart.html', cart_items=cart_items, subtotal=subtotal)
 
+
 @main.route('/cart/clear')
 def clear_cart():
     session.pop('cart', None)
     session.modified = True
-    flash("Cart cleared. You can now add items fresh!", "info")
+    flash("Cart cleared.", "info")
     return redirect(url_for('main.shop'))
+
 
 @main.route('/cart/remove/<path:cart_key>', methods=['POST'])
 def remove_from_cart(cart_key):
@@ -136,6 +116,7 @@ def remove_from_cart(cart_key):
     session.modified = True
     flash("Item removed from cart.", "info")
     return redirect(url_for('main.cart'))
+
 
 @main.route('/cart/update/<path:cart_key>', methods=['POST'])
 def update_cart(cart_key):
@@ -149,26 +130,43 @@ def update_cart(cart_key):
     session.modified = True
     return redirect(url_for('main.cart'))
 
-# --- DELIVERY FEES & COUNTIES ---
+
+# ── DELIVERY FEES ─────────────────────────────────────────────────────────────
 DELIVERY_FEES = {
-    'Nairobi': 200, 'Mombasa': 400, 'Kisumu': 400, 'Nakuru': 400, 'Eldoret': 400,
-    'Thika': 300, 'Machakos': 400, 'Nyeri': 400, 'Meru': 400, 'Kisii': 400,
-    'Kericho': 400, 'Embu': 400, 'Garissa': 500, 'Kakamega': 400, 'Malindi': 400,
-    'Lamu': 500, 'Baringo': 400, 'Bomet': 400, 'Bungoma': 400, 'Busia': 400,
-    'Elgeyo Marakwet': 400, 'Homa Bay': 400, 'Isiolo': 400, 'Kajiado': 300,
-    'Kilifi': 400, 'Kirinyaga': 300, 'Kitui': 400, 'Kwale': 400, 'Laikipia': 400,
-    'Makueni': 400, 'Mandera': 500, 'Marsabit': 500, 'Migori': 400, "Murang'a": 300,
-    'Nandi': 400, 'Narok': 400, 'Nyandarua': 400, 'Nyamira': 400, 'Samburu': 500,
-    'Siaya': 400, 'Taita Taveta': 400, 'Tana River': 500, 'Tharaka Nithi': 400,
-    'Trans Nzoia': 400, 'Turkana': 500, 'Uasin Gishu': 400, 'Vihiga': 400,
-    'Wajir': 500, 'West Pokot': 400, 'Other': 400,
+    'Nairobi': 200, 'Mombasa': 400, 'Kisumu': 400, 'Nakuru': 400,
+    'Eldoret': 400, 'Thika': 300, 'Machakos': 400, 'Nyeri': 400,
+    'Meru': 400, 'Kisii': 400, 'Kericho': 400, 'Embu': 400,
+    'Garissa': 500, 'Kakamega': 400, 'Malindi': 400, 'Lamu': 500,
+    'Baringo': 400, 'Bomet': 400, 'Bungoma': 400, 'Busia': 400,
+    'Elgeyo Marakwet': 400, 'Homa Bay': 400, 'Isiolo': 400,
+    'Kajiado': 300, 'Kilifi': 400, 'Kirinyaga': 300, 'Kitui': 400,
+    'Kwale': 400, 'Laikipia': 400, 'Makueni': 400, 'Mandera': 500,
+    'Marsabit': 500, 'Migori': 400, "Murang'a": 300, 'Nandi': 400,
+    'Narok': 400, 'Nyandarua': 400, 'Nyamira': 400, 'Samburu': 500,
+    'Siaya': 400, 'Taita Taveta': 400, 'Tana River': 500,
+    'Tharaka Nithi': 400, 'Trans Nzoia': 400, 'Turkana': 500,
+    'Uasin Gishu': 400, 'Vihiga': 400, 'Wajir': 500,
+    'West Pokot': 400, 'Other': 400,
 }
 
-KENYAN_COUNTIES = sorted(list(DELIVERY_FEES.keys()))
+KENYAN_COUNTIES = sorted([
+    'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
+    'Machakos', 'Nyeri', 'Meru', 'Kisii', 'Kericho', 'Embu',
+    'Garissa', 'Kakamega', 'Malindi', 'Lamu', 'Baringo', 'Bomet',
+    'Bungoma', 'Busia', 'Elgeyo Marakwet', 'Homa Bay', 'Isiolo',
+    'Kajiado', 'Kilifi', 'Kirinyaga', 'Kitui', 'Kwale', 'Laikipia',
+    'Makueni', 'Mandera', 'Marsabit', 'Migori', "Murang'a",
+    'Nandi', 'Narok', 'Nyandarua', 'Nyamira', 'Samburu',
+    'Siaya', 'Taita Taveta', 'Tana River', 'Tharaka Nithi',
+    'Trans Nzoia', 'Turkana', 'Uasin Gishu', 'Vihiga',
+    'Wajir', 'West Pokot', 'Other'
+])
+
 
 @main.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     cart = session.get('cart', {})
+
     if not cart:
         flash("Your cart is empty.", "info")
         return redirect(url_for('main.shop'))
@@ -177,10 +175,10 @@ def checkout():
     subtotal = 0
     for cart_key, item in cart.items():
         try:
-            item_price = float(item.get('price', 0))
+            item_price    = float(item.get('price', 0))
             item_quantity = int(item.get('quantity', 1))
-            item_total = item_price * item_quantity
-            subtotal += item_total
+            item_total    = item_price * item_quantity
+            subtotal     += item_total
             cart_items.append({
                 'cart_key': cart_key,
                 'name':     item.get('name', 'Unknown'),
@@ -195,22 +193,17 @@ def checkout():
 
     if request.method == 'POST':
         customer_name    = request.form.get('customer_name', '').strip()
-        raw_phone        = request.form.get('customer_phone', '').strip()
+        customer_phone   = request.form.get('customer_phone', '').strip()
         delivery_address = request.form.get('delivery_address', '').strip()
         county           = request.form.get('county', '').strip()
 
-        # Phone formatting to ensure M-Pesa works (converts 07... to 2547...)
-        clean_phone = raw_phone.replace(" ", "").replace("+", "")
-        if clean_phone.startswith('0'):
-            customer_phone = '254' + clean_phone[1:]
-        elif clean_phone.startswith('7') or clean_phone.startswith('1'):
-            customer_phone = '254' + clean_phone
-        else:
-            customer_phone = clean_phone
-
         if not all([customer_name, customer_phone, delivery_address, county]):
             flash("Please fill in all required fields.", "danger")
-            return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, counties=KENYAN_COUNTIES, delivery_fees=DELIVERY_FEES)
+            return render_template('checkout.html',
+                                   cart_items=cart_items,
+                                   subtotal=subtotal,
+                                   counties=KENYAN_COUNTIES,
+                                   delivery_fees=DELIVERY_FEES)
 
         delivery_fee = DELIVERY_FEES.get(county, 400)
         total        = subtotal + delivery_fee
@@ -239,34 +232,41 @@ def checkout():
         db.session.add(order)
         db.session.commit()
 
+        # ── M-Pesa STK Push ──────────────────────────────────────────────────
         try:
             from app.mpesa import send_stk_push
-            # Debugging print to check Terminal
-            print(f"DEBUG: Pushing STK to {customer_phone}")
-            mpesa_response = send_stk_push(phone=customer_phone, amount=total, order_number=order_number)
-            print(f"M-Pesa Response: {mpesa_response}")
-
+            mpesa_response = send_stk_push(
+                phone        = customer_phone,
+                amount       = total,
+                order_number = order_number
+            )
             if mpesa_response.get('ResponseCode') == '0':
                 order.checkout_request_id = mpesa_response.get('CheckoutRequestID')
                 db.session.commit()
-                flash(f"Order {order_number} placed! Check phone for PIN prompt.", "success")
+                flash(f"Order {order_number} placed! Check your phone for M-Pesa prompt.", "success")
             else:
-                flash(f"M-Pesa Failed: {mpesa_response.get('ResponseDescription', 'Try again')}", "danger")
+                flash(f"Order placed but M-Pesa failed. Pay manually.", "danger")
         except Exception as e:
-            print(f"M-Pesa Error: {e}")
-            flash("Order placed but payment push failed.", "danger")
+            print(f"M-Pesa error: {e}")
+            flash("Order placed but M-Pesa push failed.", "danger")
 
         session.pop('cart', None)
         session.modified = True
         return redirect(url_for('main.order_confirm', order_id=order.id))
 
-    return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, counties=KENYAN_COUNTIES, delivery_fees=DELIVERY_FEES)
+    return render_template('checkout.html',
+                           cart_items=cart_items,
+                           subtotal=subtotal,
+                           counties=KENYAN_COUNTIES,
+                           delivery_fees=DELIVERY_FEES)
+
 
 @main.route('/order/<int:order_id>')
 def order_confirm(order_id):
     order = Order.query.get_or_404(order_id)
     items = json.loads(order.items)
     return render_template('order_confirm.html', order=order, items=items)
+
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
@@ -282,7 +282,26 @@ def login():
         flash("Invalid username or password.", "danger")
     return render_template('login.html')
 
+
 @main.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+
+# ── ONE-TIME ADMIN SETUP ──────────────────────────────────────────────────────
+# Visit https://vouge-s-wear.onrender.com/setup-admin ONCE to create your admin
+# Then DELETE this route and push again for security
+@main.route('/setup-admin')
+def setup_admin():
+    existing = User.query.filter_by(username='alex').first()
+    if existing:
+        return 'Admin already exists! Login with username: alex'
+    user = User(
+        username      = 'alex',
+        password_hash = 'VoguesWear2026!',
+        is_admin      = True
+    )
+    db.session.add(user)
+    db.session.commit()
+    return '✅ Admin created! Username: alex | Password: VoguesWear2026! — Now delete this route!'

@@ -4,7 +4,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 
-# 1. Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
@@ -12,35 +11,54 @@ login_manager = LoginManager()
 def create_app():
     app = Flask(__name__)
 
-    # 2. Configuration
-    # SECRET_KEY must be long and random — this fixes the cart session dropping
+    # ── Configuration ─────────────────────────────────────────────────────────
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'vogues-wear-super-secret-key-alex-karita-2026-xk9!')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///vogueswear.db'
+
+    # ── Database ──────────────────────────────────────────────────────────────
+    # On Render: SQLite stored in /tmp so it persists during the session
+    # For production use PostgreSQL by setting DATABASE_URL in environment variables
+    database_url = os.getenv('DATABASE_URL', '')
+
+    if database_url:
+        # Fix for older Render PostgreSQL URLs that start with postgres://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        # Use SQLite — works on both local and Render free tier
+        db_path = os.path.join(app.instance_path, 'vogueswear.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Session config — fixes cart stopping after first use
-    app.config['SESSION_COOKIE_SECURE'] = False       # False for localhost (HTTP)
+    # ── Session config ────────────────────────────────────────────────────────
+    app.config['SESSION_COOKIE_SECURE']   = False
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours in seconds
+    app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
 
-    # Upload folder
+    # ── Upload folder ─────────────────────────────────────────────────────────
     app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-    # 3. Initialize extensions
+    # ── Initialize extensions ─────────────────────────────────────────────────
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'main.login'
 
-    # 4. Register blueprints
+    # ── Register blueprints ───────────────────────────────────────────────────
     from app.routes import main
     from app.admin_routes import admin_bp
 
     app.register_blueprint(main)
     app.register_blueprint(admin_bp)
+
+    # ── Create all database tables on startup ─────────────────────────────────
+    # This runs every time the app starts — safe to run multiple times
+    with app.app_context():
+        db.create_all()
+        print("✅ Database tables created/verified.")
 
     return app
 

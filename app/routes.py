@@ -1,6 +1,8 @@
 import json
 import uuid
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+import os
+import google.generativeai as genai
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from flask_login import login_user, logout_user, login_required
 from app import db
 from app.models import Product, ProductImage, User, Order
@@ -287,6 +289,31 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+
+@main.route('/api/ai-stylist', methods=['POST'])
+def ai_stylist():
+    try:
+        data = request.get_json()
+        product_name = data.get('product_name', 'item')
+        
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            return jsonify({"suggestion": "Stylist is currently resting. Please check API Key!"}), 200
+
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-pro')
+        
+        prompt = (
+            f"You are a professional fashion stylist for Vogue's Wear. "
+            f"Give a short, trendy styling tip (max 2 sentences) for: {product_name}."
+        )
+        response = model.generate_content(prompt)
+        
+        return jsonify({"suggestion": response.text})
+    except Exception as e:
+        print(f"AI Error: {e}")
+        return jsonify({"suggestion": "I'm having trouble seeing the vision right now!"}), 200
 
 
 # ── ONE-TIME ADMIN SETUP ──────────────────────────────────────────────────────

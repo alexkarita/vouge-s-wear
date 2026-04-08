@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 # Load .env from the project root (2 levels up from this file)
 # This file is at: app/mpesa.py
-# .env is at:      vogueswear/.env
+# .env is at:       vogueswear/.env
 load_dotenv(Path(__file__).parent.parent / '.env')
 
 
@@ -41,6 +41,16 @@ def send_stk_push(phone, amount, order_number):
     if not access_token:
         return {"ResponseCode": "1", "ResponseDescription": "Failed to get access token"}
 
+    # --- FIX: Ensure minimum amount of 5 KES for M-Pesa compatibility ---
+    try:
+        final_amount = float(amount)
+        if final_amount < 5:
+            print(f"⚠️ Amount {final_amount} is too low. Adjusting to 5 KES for M-Pesa STK Push.")
+            final_amount = 5
+    except (ValueError, TypeError):
+        final_amount = 5
+    # ------------------------------------------------------------------
+
     shortcode = "174379"
     passkey   = os.getenv("DARAJA_PASSKEY")
 
@@ -54,7 +64,7 @@ def send_stk_push(phone, amount, order_number):
     data_to_encode = shortcode + passkey + timestamp
     password = base64.b64encode(data_to_encode.encode()).decode('utf-8')
 
-    # Callback URL — update this in .env when ngrok restarts
+    # Callback URL — update this in .env when ngrok restarts or on Render
     callback_url = os.getenv(
         "CALLBACK_URL",
         "https://elidible-ungroundable-cheryll.ngrok-free.dev/mpesa/callback"
@@ -62,7 +72,7 @@ def send_stk_push(phone, amount, order_number):
 
     # Format phone to 2547XXXXXXXX
     phone = format_phone(phone)
-    print(f"📱 Sending STK push to: {phone}")
+    print(f"📱 Sending STK push to: {phone} for Amount: {int(final_amount)} KES")
 
     api_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -72,12 +82,12 @@ def send_stk_push(phone, amount, order_number):
         "Password":          password,
         "Timestamp":         timestamp,
         "TransactionType":   "CustomerPayBillOnline",
-        "Amount":            int(float(amount)),
+        "Amount":            int(final_amount), # M-Pesa requires an integer
         "PartyA":            phone,
         "PartyB":            shortcode,
         "PhoneNumber":       phone,
         "CallBackURL":       callback_url,
-        "AccountReference":  order_number,
+        "AccountReference":  str(order_number),
         "TransactionDesc":   f"Payment for Order {order_number}"
     }
 

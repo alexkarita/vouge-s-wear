@@ -42,7 +42,7 @@
             <div class="group block bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
                 <a href="{{ url_for('main.product_detail', product_id=product.id) }}" class="relative block overflow-hidden aspect-[4/5]">
                     {% if product.image_url %}
-                    <img src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                    <img src="{{ product.image_url }}"
                          alt="{{ product.name }}"
                          class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
                     {% else %}

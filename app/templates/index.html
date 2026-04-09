@@ -3,7 +3,7 @@
 {% block content %}
 <div class="relative bg-black text-white py-32 px-4 overflow-hidden">
     <div class="max-w-7xl mx-auto relative z-10 text-center">
-        <p class="text-[10px] font-bold uppercase tracking-[0.5em] mb-6 text-gray-400">Clothes & Shoes — Men & Women — Nairobi, Kenya</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.5em] mb-6 text-gray-400">Clothes & Shoes — Men & Women — Mombasa, Kenya</p>
         <h1 class="text-6xl md:text-8xl font-black italic uppercase tracking-tighter mb-8 leading-none">
             Dress Like <br> <span class="text-yellow-400">You Mean It</span>
         </h1>
@@ -30,7 +30,7 @@
         <div class="group">
             <a href="{{ url_for('main.product_detail', product_id=product.id) }}" class="block relative aspect-[3/4] overflow-hidden rounded-2xl mb-4 bg-gray-100">
                 {% if product.image_url %}
-                <img src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
                      alt="{{ product.name }}"
                      class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
                 {% else %}

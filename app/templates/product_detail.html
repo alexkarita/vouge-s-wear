@@ -43,7 +43,7 @@
                 <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 aspect-square md:aspect-auto">
                     {% if product.image_url %}
                     <img id="main-display-image" 
-                         src="{{ url_for('static', filename='uploads/' + product.image_url.split('/')[-1]) }}"
+                         src="{{ product.image_url }}"
                          alt="{{ product.name }}"
                          class="w-full h-[550px] object-cover">
                     {% else %}
@@ -56,7 +56,7 @@
                 {% if gallery %}
                 <div class="flex gap-4 overflow-x-auto pb-4 thumb-scroll">
                     {% for img in gallery %}
-                    <img src="{{ url_for('static', filename='uploads/' + img.url.split('/')[-1]) }}" 
+                    <img src="{{ img.url }}" 
                          onclick="updateMainImage(this)"
                          class="w-24 h-24 object-cover rounded-2xl cursor-pointer border-2 transition hover:opacity-100 gallery-thumb 
                          {% if img.url == product.image_url %} active-thumb border-black {% else %} border-transparent opacity-60 {% endif %}">
@@ -181,7 +181,6 @@
             responseDiv.innerHTML = '<div class="flex items-center gap-2"><div class="animate-spin rounded-full h-3 w-3 border-b-2 border-black"></div><span class="text-[10px] font-black uppercase tracking-widest">Consulting...</span></div>';
             btn.disabled = true;
 
-            // Updated to match your routes.py
             fetch('/ai-stylist/{{ product.id }}')
                 .then(res => res.json())
                 .then(data => {
@@ -198,7 +197,6 @@
             const tipElement = document.getElementById('ai-look-tip');
             const loader = document.getElementById('ai-look-loading');
 
-            // Using the same endpoint to populate the look grid
             fetch('/ai-stylist/{{ product.id }}')
                 .then(res => res.json())
                 .then(data => {
@@ -206,9 +204,9 @@
                         tipElement.innerHTML = `✨ VOGUE'S SELECTIONS`;
                         grid.innerHTML = ''; 
                         data.recommendations.forEach(item => {
-                            let fileName = item.image_url.split('/').pop();
-                            let imageSrc = `/static/uploads/${fileName}`;
-                            
+                            // Use the full Supabase URL directly from the API response
+                            let imageSrc = item.image_url;
+
                             grid.innerHTML += `
                                 <a href="/product/${item.id}" class="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all border border-gray-100 block">
                                     <div class="overflow-hidden aspect-[3/4]">

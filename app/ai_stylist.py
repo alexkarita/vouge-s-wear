@@ -27,8 +27,10 @@ def get_complete_the_look(current_product, inventory_list):
     Feeds real database items to Groq and asks for 2 specific matches.
     Returns a dictionary with a tip and product IDs.
     """
-    # Create a text-based version of your database for the AI to read
-    inventory_data = "\n".join([f"ID: {p.id} | Name: {p.name} | Cat: {p.category}" for p in inventory_list])
+    inventory_data = "\n".join([
+        f"ID: {p.id} | Name: {p.name} | Cat: {p.category}" 
+        for p in inventory_list
+    ])
 
     prompt = f"""
     CUSTOMER IS VIEWING: {current_product.name} ({current_product.category})
@@ -39,7 +41,7 @@ def get_complete_the_look(current_product, inventory_list):
     TASK:
     1. Pick exactly 2 items from the AVAILABLE INVENTORY that best 'Complete the Look'.
     2. Provide a 1-sentence styling tip.
-    3. Respond ONLY in this JSON format:
+    3. Respond ONLY in this JSON format, no extra text:
     {{
         "tip": "styling advice here",
         "recommended_ids": [id1, id2]
@@ -50,10 +52,12 @@ def get_complete_the_look(current_product, inventory_list):
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are a database-aware fashion coordinator. You only recommend IDs that exist in the provided list."},
+                {"role": "system", "content": "You are a database-aware fashion coordinator. You only recommend IDs that exist in the provided list. Always respond with valid JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            temperature=0.7,
+            max_tokens=200
         )
         return json.loads(completion.choices[0].message.content)
     except Exception as e:
@@ -62,13 +66,14 @@ def get_complete_the_look(current_product, inventory_list):
 
 def get_chat_recommendations(messages, inventory_list):
     """
-    NEW: Handles conversational chat with context and product awareness.
+    Handles conversational chat with context and product awareness.
     'messages' is the list of conversation history from the Flask session.
     """
-    # Create a concise inventory list so the AI knows what we actually sell
-    inventory_text = "\n".join([f"- {p.name} (KES {p.price}) | Cat: {p.category}" for p in inventory_list])
+    inventory_text = "\n".join([
+        f"- {p.name} (KES {p.price}) | Cat: {p.category}" 
+        for p in inventory_list
+    ])
     
-    # Define the "Brain" of the stylist
     system_prompt = {
         "role": "system", 
         "content": f"""You are the official Vogue's Wear AI Stylist. 
@@ -85,7 +90,6 @@ def get_chat_recommendations(messages, inventory_list):
         """
     }
     
-    # Combine the system instructions with the actual conversation history
     full_payload = [system_prompt] + messages
 
     try:

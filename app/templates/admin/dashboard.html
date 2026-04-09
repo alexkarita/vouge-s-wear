@@ -84,7 +84,7 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-3">
                                 {% if product.image_url %}
-                                <img src="{{ url_for('static', filename='uploads/' + product.image_url) }}"
+                                <img src="{{ product.image_url }}"
                                      alt="{{ product.name }}" class="w-12 h-14 object-cover rounded-xl flex-shrink-0">
                                 {% else %}
                                 <div class="w-12 h-14 bg-gray-100 rounded-xl flex-shrink-0"></div>
@@ -128,7 +128,7 @@
                                       onsubmit="return confirm('Delete {{ product.name }}?')">
                                     <button type="submit" class="text-[10px] font-bold uppercase bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition">Delete</button>
                                 </form>
-                                <form action="{{ url_for('admin.toggle_featured', product_id=product.id) }}" method="POST"></form>
+                                <form action="{{ url_for('admin.toggle_featured', product_id=product.id) }}" method="POST">
                                     <button type="submit" class="text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg hover:bg-yellow-200 transition">
                                         {% if product.is_featured %}Unfeature{% else %}Feature{% endif %}
                                     </button>

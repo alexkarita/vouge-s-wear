@@ -29,15 +29,13 @@
     {% if cart_items %}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-        <!-- Cart Items -->
         <div class="lg:col-span-2 space-y-4">
             {% for item in cart_items %}
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex gap-5 items-center">
 
-                <!-- Product Image -->
                 <div class="flex-shrink-0">
                     {% if item.image %}
-                    <img src="{{ url_for('static', filename='uploads/' + item.image) }}"
+                    <img src="{{ item.image }}" 
                          alt="{{ item.name }}"
                          class="w-20 h-24 object-cover rounded-xl">
                     {% else %}
@@ -45,7 +43,6 @@
                     {% endif %}
                 </div>
 
-                <!-- Product Info -->
                 <div class="flex-1 min-w-0">
                     <h3 class="font-bold text-sm uppercase tracking-tight truncate">{{ item.name }}</h3>
                     {% if item.size %}
@@ -53,7 +50,6 @@
                     {% endif %}
                     <p class="text-gray-400 text-[10px] uppercase tracking-widest mt-1">KES {{ "{:,}".format(item.price|int) }} each</p>
 
-                    <!-- Quantity updater -->
                     <form action="{{ url_for('main.update_cart', cart_key=item.cart_key) }}" method="POST" class="flex items-center gap-3 mt-3">
                         <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                             <button type="button" onclick="changeQty(this, -1)" class="px-3 py-1 text-gray-500 hover:bg-gray-100 font-bold text-sm transition">−</button>
@@ -65,7 +61,6 @@
                     </form>
                 </div>
 
-                <!-- Item total + remove -->
                 <div class="text-right flex-shrink-0">
                     <p class="font-black text-sm">KES {{ "{:,}".format(item.total|int) }}</p>
                     <form action="{{ url_for('main.remove_from_cart', cart_key=item.cart_key) }}" method="POST" class="mt-2">
@@ -79,7 +74,6 @@
             {% endfor %}
         </div>
 
-        <!-- Order Summary -->
         <div class="lg:col-span-1">
             <div class="bg-black text-white rounded-2xl p-7 sticky top-6">
                 <h2 class="font-black text-lg uppercase tracking-tight mb-6">Order Summary</h2>
@@ -91,6 +85,7 @@
                         <span class="flex-shrink-0">KES {{ "{:,}".format(item.total|int) }}</span>
                     </div>
                     {% endfor %}
+                    
                     <div class="border-t border-gray-700 pt-3 flex justify-between">
                         <span class="text-gray-400">Subtotal</span>
                         <span class="font-bold">KES {{ "{:,}".format(subtotal|int) }}</span>
@@ -116,7 +111,6 @@
     </div>
 
     {% else %}
-    <!-- Empty cart -->
     <div class="text-center py-32 border-2 border-dashed border-gray-200 rounded-3xl">
         <div class="text-6xl mb-6">🛒</div>
         <h2 class="text-2xl font-black uppercase italic mb-3">Your cart is empty</h2>

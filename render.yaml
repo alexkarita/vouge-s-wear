@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: vogues-wear
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn "app:create_app()" --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        value: postgresql://admin:YqvXKpKylYcvW03xtDWgQ8nLOvLpgIcE@dpg-d7ama1pr0fns73946hv0-a.oregon-postgres.render.com/voguedb?sslmode=require

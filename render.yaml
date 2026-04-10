@@ -7,5 +7,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: DATABASE_URL
-        value: postgresql://admin:YqvXKpKylYcvW03xtDWgQ8nLOvLpgIcE@dpg-d7ama1pr0fns73946hv0-a.oregon-postgres.render.com/voguedb?sslmode=require

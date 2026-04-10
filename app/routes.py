@@ -319,19 +319,13 @@ def ai_stylist(product_id):
     try:
         from app.ai_stylist import get_complete_the_look, get_styling_advice
 
-        # Get the current product
         product = Product.query.get_or_404(product_id)
-
-        # Get all other products for recommendations (exclude current)
         inventory = Product.query.filter(Product.id != product_id).all()
-
-        # Get AI styling tip + recommended product IDs
         result = get_complete_the_look(product, inventory)
 
         styling_tip = result.get('tip', 'Style it your way!')
         recommended_ids = result.get('recommended_ids', [])
 
-        # Build recommended products with full Supabase image URLs
         recommendations = []
         for pid in recommended_ids:
             p = Product.query.get(pid)
@@ -373,6 +367,34 @@ def ai_stylist_legacy():
         return jsonify({"suggestion": response.text})
     except Exception as e:
         return jsonify({"suggestion": "I'm having trouble seeing the vision right now!"}), 200
+
+
+# ── 9. SETUP ROUTES (TEMPORARY - DELETE AFTER USE) ───────────────────────────
+@main.route('/setup-images')
+def setup_images():
+    fixes = {
+        'Adidas Campus 00s (Black/White)':    'Adidas Campus 00s - BlackWhite.jfif',
+        'Adidas Campus 00s (Grey/White)':     'Adidas Campus 00s - GreyWhite.jfif',
+        'Adidas Samba OG (Black/White)':      'Adidas Samba OG - BlackWhite.jfif',
+        'Air Jordan 4 Retro - Metallic Gold': 'Air Jordan 4 Retro - Metallic Gold.jfif',
+        'Air Jordan 4 Retro (Metallic Red)':  'Air Jordan 4 Retro.jfif',
+        'Nike Air Force 1 Low (Triple White)':'Nike Air Force 1.jfif',
+        'Striped Rugby Polo':                 'striped-rugby-polo.jpg.jpeg',
+        'Black Work Jersey':                  'black-work-jersey.jpg.jpeg',
+        'Nike Dunk Olive':                    'nike-dunk-olive.jpg.jpeg',
+        'LV Trainer Pink':                    'lv-trainer-pink.jpg.jpeg',
+        'Heart Zip Pullover':                 'heart-zip-pullover.jpg.jpeg',
+    }
+    results = []
+    for name, filename in fixes.items():
+        p = Product.query.filter_by(name=name).first()
+        if p:
+            p.image_url = filename
+            results.append(f'✅ Fixed: {name}')
+        else:
+            results.append(f'❌ Not found: {name}')
+    db.session.commit()
+    return '<br>'.join(results) + '<br><br>✅ Done! <a href="/">Go Home</a>'
 
 
 @main.route('/setup-admin')

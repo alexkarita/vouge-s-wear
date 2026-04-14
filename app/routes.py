@@ -212,7 +212,7 @@ DELIVERY_FEES = {
 KENYAN_COUNTIES = sorted(list(DELIVERY_FEES.keys()))
 
 
-# ── 5. CHECKOUT & ORDER CONFIRMATION ──────────────────────────────────────────
+# ── 5. CHECKOUT ───────────────────────────────────────────────────────────────
 @main.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     cart = session.get('cart', {})
@@ -246,38 +246,28 @@ def checkout():
         total_amount = subtotal + delivery_fee
         order_number = 'VW-' + uuid.uuid4().hex[:6].upper()
 
+        # Clean phone number — ensure it starts with 254
+        clean_phone = customer_phone.replace('+', '').replace(' ', '').replace('-', '')
+        if clean_phone.startswith('0'):
+            clean_phone = '254' + clean_phone[1:]
+        elif not clean_phone.startswith('254'):
+            clean_phone = '254' + clean_phone
+
         order = Order(
             order_number     = order_number,
             customer_name    = customer_name,
-            customer_phone   = customer_phone,
+            customer_phone   = clean_phone,
             delivery_address = delivery_address,
             county           = county,
             items            = json.dumps(cart_items),
             subtotal         = int(subtotal),
             delivery_fee     = delivery_fee,
             total            = int(total_amount),
-            payment_status   = 'Waiting for PIN',
+            payment_status   = 'Pending',
             order_status     = 'pending',
         )
         db.session.add(order)
         db.session.commit()
-
-        try:
-            from app.mpesa import send_stk_push
-            mpesa_response = send_stk_push(
-                phone        = customer_phone,
-                amount       = total_amount,
-                order_number = order_number
-            )
-            if mpesa_response.get('ResponseCode') == '0':
-                order.checkout_request_id = mpesa_response.get('CheckoutRequestID')
-                db.session.commit()
-                flash(f"Check your phone for the M-Pesa prompt!", "success")
-            else:
-                flash("Could not initiate M-Pesa. Pay manually or try again.", "danger")
-        except Exception as e:
-            print(f"M-Pesa error: {e}")
-            flash("Order saved, but M-Pesa prompt failed.", "danger")
 
         session.pop('cart', None)
         return redirect(url_for('main.order_confirm', order_id=order.id))
@@ -285,6 +275,8 @@ def checkout():
     return render_template('checkout.html', cart_items=cart_items, subtotal=subtotal, 
                             counties=KENYAN_COUNTIES, delivery_fees=DELIVERY_FEES)
 
+
+# ── 6. ORDER CONFIRMATION PAGE ────────────────────────────────────────────────
 @main.route('/order/<int:order_id>')
 def order_confirm(order_id):
     order = Order.query.get_or_404(order_id)
@@ -292,7 +284,59 @@ def order_confirm(order_id):
     return render_template('order_confirm.html', order=order, items=items)
 
 
-# ── 6. AUTH & ADMIN ───────────────────────────────────────────────────────────
+# ── 7. I HAVE PAID ────────────────────────────────────────────────────────────
+@main.route('/order/<int:order_id>/paid', methods=['POST'])
+def i_have_paid(order_id):
+    order = Order.query.get_or_404(order_id)
+
+    # Update status to show customer claims to have paid
+    order.payment_status = 'Claimed Paid'
+    db.session.commit()
+
+    # Send instant WhatsApp acknowledgement to customer
+    try:
+        from app.whatsapp_client import send_whatsapp_message
+
+        items_list = order.get_whatsapp_items()
+
+        customer_msg = (
+            f"🛍️ *VOGUE'S WEAR — ORDER RECEIVED*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Hi *{order.customer_name}*! 👋\n\n"
+            f"We've received your order and are verifying your M-Pesa payment.\n\n"
+            f"📌 *Order:* #{order.order_number}\n"
+            f"📦 *Items:*\n{items_list}\n"
+            f"💰 *Total:* KES {order.total:,}\n"
+            f"📍 *Deliver to:* {order.delivery_address}, {order.county}\n\n"
+            f"⏳ We'll confirm your payment shortly and notify you once your order is being prepared.\n\n"
+            f"Thank you for shopping with Vogue's Wear! 🔥\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        send_whatsapp_message(order.customer_phone, customer_msg)
+
+        # Also notify admin (your number)
+        admin_msg = (
+            f"🔔 *NEW ORDER — PAYMENT CLAIMED*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📌 Order: *#{order.order_number}*\n"
+            f"👤 Customer: {order.customer_name}\n"
+            f"📱 Phone: +{order.customer_phone}\n"
+            f"💰 Amount: KES {order.total:,}\n"
+            f"📦 Items:\n{items_list}\n"
+            f"📍 Delivery: {order.delivery_address}, {order.county}\n\n"
+            f"✅ Check your M-Pesa SMS for Till 3425670\n"
+            f"Then go to Admin Dashboard to confirm & update order status."
+        )
+        send_whatsapp_message('254794724796', admin_msg)
+
+    except Exception as e:
+        print(f"WhatsApp error: {e}")
+
+    flash("Thank you! We've received your order and are verifying your payment. Check your WhatsApp for confirmation.", "success")
+    return redirect(url_for('main.order_confirm', order_id=order.id))
+
+
+# ── 8. AUTH ───────────────────────────────────────────────────────────────────
 @main.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -313,7 +357,7 @@ def logout():
     return redirect(url_for('main.index'))
 
 
-# ── 7. AI STYLIST (Groq) ─────────────────────────────────────────────────────
+# ── 9. AI STYLIST (Groq) ─────────────────────────────────────────────────────
 @main.route('/ai-stylist/<int:product_id>', methods=['GET'])
 def ai_stylist(product_id):
     try:
@@ -350,7 +394,7 @@ def ai_stylist(product_id):
         }), 200
 
 
-# ── 8. OLD API ROUTE (kept for backwards compatibility) ───────────────────────
+# ── 10. OLD API ROUTE (kept for backwards compatibility) ──────────────────────
 @main.route('/api/ai-stylist', methods=['POST'])
 def ai_stylist_legacy():
     try:
@@ -369,7 +413,7 @@ def ai_stylist_legacy():
         return jsonify({"suggestion": "I'm having trouble seeing the vision right now!"}), 200
 
 
-# ── 9. SETUP ROUTES (TEMPORARY - DELETE AFTER USE) ───────────────────────────
+# ── 11. SETUP ROUTES (TEMPORARY - DELETE AFTER USE) ──────────────────────────
 @main.route('/setup-images')
 def setup_images():
     fixes = {

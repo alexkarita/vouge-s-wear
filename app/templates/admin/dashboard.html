@@ -32,8 +32,44 @@
         {% endfor %}{% endif %}
     {% endwith %}
 
+    <!-- CLAIMED PAID ALERT (shows when customers have clicked I Have Paid) -->
+    {% set claimed_orders = orders | selectattr('payment_status', 'equalto', 'Claimed Paid') | list %}
+    {% if claimed_orders %}
+    <div class="mb-8 bg-orange-50 border-2 border-orange-400 rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="text-2xl">🔔</span>
+            <h3 class="font-black text-orange-800 uppercase tracking-wide text-sm">
+                {{ claimed_orders | length }} Order{{ 's' if claimed_orders | length > 1 }} Awaiting Payment Verification
+            </h3>
+        </div>
+        <div class="space-y-3">
+            {% for order in claimed_orders %}
+            <div class="bg-white rounded-xl p-4 flex items-center justify-between border border-orange-200">
+                <div>
+                    <p class="font-black text-sm text-orange-700">{{ order.order_number }}</p>
+                    <p class="text-xs text-gray-500">{{ order.customer_name }} · KES {{ "{:,}".format(order.total) }} · Check Till 3425670 SMS</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{{ url_for('admin.order_detail', order_id=order.id) }}"
+                       class="text-[10px] font-bold uppercase bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition">
+                        View Order
+                    </a>
+                    <form action="{{ url_for('admin.confirm_payment', order_id=order.id) }}" method="POST">
+                        <input type="hidden" name="next" value="{{ url_for('admin.dashboard') }}">
+                        <button type="submit"
+                                class="text-[10px] font-bold uppercase bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition">
+                            ✅ Confirm Payment
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-10">
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-center">
             <p class="text-3xl font-black">{{ stats.total }}</p>
             <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">Products</p>
@@ -57,6 +93,10 @@
         <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-center">
             <p class="text-3xl font-black text-orange-500">{{ stats.pending_orders }}</p>
             <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-1">Pending</p>
+        </div>
+        <div class="bg-orange-400 rounded-2xl p-5 shadow-sm text-center">
+            <p class="text-3xl font-black text-white">{{ stats.claimed_paid }}</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-white mt-1">Awaiting</p>
         </div>
     </div>
 
@@ -166,7 +206,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for order in orders %}
-                    <tr class="hover:bg-gray-50 transition">
+                    <tr class="hover:bg-gray-50 transition {% if order.payment_status == 'Claimed Paid' %}bg-orange-50{% endif %}">
                         <td class="px-6 py-4">
                             <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" class="font-black text-sm text-yellow-600 hover:underline">{{ order.order_number }}</a>
                             <p class="text-[10px] text-gray-400">{{ order.created_at.strftime('%d %b %Y') }}</p>
@@ -178,10 +218,11 @@
                         <td class="px-4 py-4"><p class="font-black text-sm">KES {{ "{:,}".format(order.total) }}</p></td>
                         <td class="px-4 py-4">
                             <span class="text-[10px] font-bold uppercase px-3 py-1 rounded-full
-                                {% if order.payment_status == 'paid' %}bg-green-100 text-green-700
+                                {% if order.payment_status == 'Paid' %}bg-green-100 text-green-700
+                                {% elif order.payment_status == 'Claimed Paid' %}bg-orange-100 text-orange-700
                                 {% elif order.payment_status == 'failed' %}bg-red-100 text-red-600
                                 {% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                                {{ order.payment_status }}
+                                {% if order.payment_status == 'Claimed Paid' %}🔔 {{ order.payment_status }}{% else %}{{ order.payment_status }}{% endif %}
                             </span>
                         </td>
                         <td class="px-4 py-4">
@@ -194,9 +235,18 @@
                             </span>
                         </td>
                         <td class="px-4 py-4">
-                            <div class="flex gap-2 items-center">
+                            <div class="flex gap-2 items-center flex-wrap">
                                 <a href="{{ url_for('admin.order_detail', order_id=order.id) }}"
                                    class="text-[10px] font-bold uppercase bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition">View</a>
+
+                                {% if order.payment_status == 'Claimed Paid' %}
+                                <form action="{{ url_for('admin.confirm_payment', order_id=order.id) }}" method="POST">
+                                    <input type="hidden" name="next" value="{{ url_for('admin.dashboard') }}">
+                                    <button type="submit" class="text-[10px] font-bold uppercase bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition">
+                                        ✅ Confirm Pay
+                                    </button>
+                                </form>
+                                {% else %}
                                 <form action="{{ url_for('admin.update_order_status', order_id=order.id) }}" method="POST" class="flex gap-1">
                                     <input type="hidden" name="next" value="{{ url_for('admin.dashboard') }}">
                                     <select name="status" class="text-xs border border-gray-200 rounded-lg px-2 py-1 outline-none">
@@ -207,6 +257,7 @@
                                     </select>
                                     <button type="submit" class="text-[10px] font-bold uppercase bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition">Save</button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

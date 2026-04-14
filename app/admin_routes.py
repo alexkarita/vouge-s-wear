@@ -33,6 +33,7 @@ def dashboard():
         'out_of_stock':   Product.query.filter_by(stock=0).count(),
         'total_orders':   Order.query.count(),
         'pending_orders': Order.query.filter_by(order_status='pending').count(),
+        'claimed_paid':   Order.query.filter_by(payment_status='Claimed Paid').count(),
     }
     return render_template('admin/dashboard.html', products=products, orders=orders, stats=stats)
 
@@ -190,6 +191,52 @@ def order_detail(order_id):
     return render_template('admin/order_detail.html', order=order, items=items)
 
 
+# ── CONFIRM PAYMENT (NEW) ─────────────────────────────────────────────────────
+@admin_bp.route('/admin/confirm-payment/<int:order_id>', methods=['POST'])
+@login_required
+def confirm_payment(order_id):
+    """
+    Admin clicks this after verifying M-Pesa SMS.
+    Sets payment to Paid and sends WhatsApp confirmation to customer.
+    """
+    if not current_user.is_admin:
+        flash("Access denied.", "danger")
+        return redirect(url_for('main.index'))
+
+    order = Order.query.get_or_404(order_id)
+    order.payment_status = 'Paid'
+    order.order_status   = 'processing'
+    db.session.commit()
+
+    try:
+        from app.whatsapp_client import send_whatsapp_message
+
+        items_list = order.get_whatsapp_items()
+
+        confirmed_msg = (
+            f"✅ *VOGUE'S WEAR — PAYMENT CONFIRMED*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Hi *{order.customer_name}*! 🎉\n\n"
+            f"Your payment of *KES {order.total:,}* has been confirmed!\n\n"
+            f"📌 *Order:* #{order.order_number}\n"
+            f"📦 *Items:*\n{items_list}\n"
+            f"📍 *Delivering to:* {order.delivery_address}, {order.county}\n"
+            f"📅 *Est. Delivery:* {order.get_delivery_date()}\n\n"
+            f"Your order is now being prepared. We'll notify you when it ships. 🚀\n\n"
+            f"Thank you for shopping with Vogue's Wear! 🔥\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        send_whatsapp_message(order.customer_phone, confirmed_msg)
+        flash(f"✅ Payment confirmed for {order.order_number} — WhatsApp sent to customer!", "success")
+
+    except Exception as e:
+        print(f"WhatsApp error: {e}")
+        flash(f"Payment confirmed but WhatsApp failed: {e}", "danger")
+
+    next_url = request.form.get('next', url_for('admin.dashboard'))
+    return redirect(next_url)
+
+
 # ── UPDATE ORDER STATUS + WHATSAPP NOTIFICATION ───────────────────────────────
 @admin_bp.route('/admin/update-order-status/<int:order_id>', methods=['POST'])
 @login_required
@@ -204,7 +251,6 @@ def update_order_status(order_id):
     order.order_status = new_status
     db.session.commit()
 
-    # ── Send WhatsApp to customer when status changes ─────────────────────────
     if new_status != old_status:
         try:
             from app.whatsapp_client import send_whatsapp_message
@@ -212,7 +258,7 @@ def update_order_status(order_id):
             if new_status == 'packed':
                 msg = (
                     f"📦 *VOGUE'S WEAR: ORDER PACKED*\n"
-                    f"--------------------------------\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
                     f"Hi *{order.customer_name}*,\n"
                     f"Your order *#{order.order_number}* has been packed and is ready for dispatch!\n\n"
                     f"📍 Delivering to: {order.delivery_address}\n"
@@ -222,9 +268,9 @@ def update_order_status(order_id):
             elif new_status == 'shipped':
                 msg = (
                     f"🚀 *VOGUE'S WEAR: ORDER SHIPPED*\n"
-                    f"--------------------------------\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
                     f"Hi *{order.customer_name}*,\n"
-                    f"Great news! Your order *#{order.order_number}* is on the move! 🎉\n\n"
+                    f"Your order *#{order.order_number}* is on the move! 🎉\n\n"
                     f"📦 Status: Out for Delivery\n"
                     f"📅 Expected: {order.get_delivery_date()}\n"
                     f"📍 To: {order.delivery_address}\n\n"
@@ -233,7 +279,7 @@ def update_order_status(order_id):
             elif new_status == 'delivered':
                 msg = (
                     f"✅ *VOGUE'S WEAR: ORDER DELIVERED*\n"
-                    f"--------------------------------\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
                     f"Hi *{order.customer_name}*,\n"
                     f"Your order *#{order.order_number}* has been delivered! 🎊\n\n"
                     f"We hope you love your new items.\n"
@@ -255,7 +301,6 @@ def update_order_status(order_id):
     else:
         flash(f"Order {order.order_number} status unchanged.", "info")
 
-    # Redirect back to where the request came from
     next_url = request.form.get('next', url_for('admin.dashboard'))
     return redirect(next_url)
 
@@ -272,35 +317,26 @@ def sales():
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
-    # ── Today's stats ─────────────────────────────────────────────────────────
-    orders_today = Order.query.filter(
-        func.date(Order.created_at) == today
-    ).all()
-    revenue_today = sum(o.total for o in orders_today if o.payment_status == 'paid')
+    orders_today = Order.query.filter(func.date(Order.created_at) == today).all()
+    revenue_today = sum(o.total for o in orders_today if o.payment_status == 'Paid')
 
-    # ── This week ─────────────────────────────────────────────────────────────
     orders_week = Order.query.filter(Order.created_at >= week_ago).all()
-    revenue_week = sum(o.total for o in orders_week if o.payment_status == 'paid')
+    revenue_week = sum(o.total for o in orders_week if o.payment_status == 'Paid')
 
-    # ── This month ────────────────────────────────────────────────────────────
     orders_month = Order.query.filter(Order.created_at >= month_ago).all()
-    revenue_month = sum(o.total for o in orders_month if o.payment_status == 'paid')
+    revenue_month = sum(o.total for o in orders_month if o.payment_status == 'Paid')
 
-    # ── All time ──────────────────────────────────────────────────────────────
     all_orders   = Order.query.all()
-    revenue_all  = sum(o.total for o in all_orders if o.payment_status == 'paid')
+    revenue_all  = sum(o.total for o in all_orders if o.payment_status == 'Paid')
     total_orders = Order.query.count()
-    paid_orders  = Order.query.filter_by(payment_status='paid').count()
+    paid_orders  = Order.query.filter_by(payment_status='Paid').count()
 
-    # ── Orders by county ──────────────────────────────────────────────────────
     county_data = db.session.query(
         Order.county,
         func.count(Order.id).label('count'),
         func.sum(Order.total).label('revenue')
     ).group_by(Order.county).order_by(func.count(Order.id).desc()).all()
 
-    # ── Most popular products (by how many times ordered) ─────────────────────
-    # Parse items JSON and count product names
     from collections import Counter
     product_counter = Counter()
     for order in all_orders:
@@ -312,16 +348,14 @@ def sales():
             continue
     top_products = product_counter.most_common(5)
 
-    # ── Recent 20 orders ──────────────────────────────────────────────────────
     recent_orders = Order.query.order_by(Order.id.desc()).limit(20).all()
 
-    # ── Daily revenue for last 7 days (for chart) ─────────────────────────────
     daily_revenue = []
     for i in range(6, -1, -1):
         day = (now - timedelta(days=i)).date()
         day_orders = Order.query.filter(
             func.date(Order.created_at) == day,
-            Order.payment_status == 'paid'
+            Order.payment_status == 'Paid'
         ).all()
         daily_revenue.append({
             'day':     day.strftime('%a'),
@@ -345,7 +379,7 @@ def sales():
     )
 
 
-# ── FIX IMAGE PATHS (one-time utility) ───────────────────────────────────────
+# ── FIX IMAGE PATHS ───────────────────────────────────────────────────────────
 @admin_bp.route('/admin/fix-image-paths')
 @login_required
 def fix_image_paths():

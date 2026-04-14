@@ -26,6 +26,24 @@
         {% endfor %}{% endif %}
     {% endwith %}
 
+    <!-- CLAIMED PAID ALERT BANNER -->
+    {% if order.payment_status == 'Claimed Paid' %}
+    <div class="mb-6 p-5 bg-orange-50 border-2 border-orange-400 rounded-2xl flex items-center gap-4">
+        <span class="text-3xl">🔔</span>
+        <div class="flex-1">
+            <p class="font-black text-orange-800 uppercase tracking-wide text-sm">Customer Claims to Have Paid!</p>
+            <p class="text-orange-700 text-xs mt-1">Check your M-Pesa SMS for Till <strong>3425670</strong> — look for <strong>KES {{ "{:,}".format(order.total) }}</strong> from {{ order.customer_name }}. Then click <strong>Confirm Payment</strong> below.</p>
+        </div>
+        <form action="{{ url_for('admin.confirm_payment', order_id=order.id) }}" method="POST">
+            <input type="hidden" name="next" value="{{ url_for('admin.order_detail', order_id=order.id) }}">
+            <button type="submit"
+                    class="bg-green-600 text-white font-black text-xs px-6 py-3 rounded-xl uppercase tracking-widest hover:bg-green-700 transition whitespace-nowrap">
+                ✅ Confirm Payment
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         <!-- Left: Order Items + Customer Info -->
@@ -40,7 +58,8 @@
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] font-bold uppercase px-4 py-2 rounded-full
-                        {% if order.payment_status == 'paid' %}bg-green-500 text-white
+                        {% if order.payment_status == 'Paid' %}bg-green-500 text-white
+                        {% elif order.payment_status == 'Claimed Paid' %}bg-orange-400 text-black
                         {% elif order.payment_status == 'failed' %}bg-red-500 text-white
                         {% else %}bg-yellow-400 text-black{% endif %}">
                         {{ order.payment_status }}
@@ -120,16 +139,38 @@
         </div>
 
         <!-- Right: Update Status -->
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1 space-y-4">
+
+            <!-- CONFIRM PAYMENT CARD -->
+            {% if order.payment_status == 'Claimed Paid' %}
+            <div class="bg-orange-50 border-2 border-orange-400 rounded-2xl p-6">
+                <h3 class="font-black text-sm uppercase tracking-widest text-orange-800 mb-2">💰 Payment Pending Verification</h3>
+                <p class="text-xs text-orange-700 mb-4">Check your Mpesa SMS for <strong>KES {{ "{:,}".format(order.total) }}</strong> to Till <strong>3425670</strong></p>
+                <form action="{{ url_for('admin.confirm_payment', order_id=order.id) }}" method="POST">
+                    <input type="hidden" name="next" value="{{ url_for('admin.order_detail', order_id=order.id) }}">
+                    <button type="submit"
+                            class="w-full bg-green-600 text-white font-black text-xs py-4 rounded-xl uppercase tracking-widest hover:bg-green-700 transition">
+                        ✅ Confirm Payment & Notify Customer
+                    </button>
+                </form>
+            </div>
+            {% elif order.payment_status == 'Paid' %}
+            <div class="bg-green-50 border-2 border-green-400 rounded-2xl p-6 text-center">
+                <span class="text-3xl">✅</span>
+                <p class="font-black text-green-800 uppercase tracking-wide text-sm mt-2">Payment Confirmed</p>
+                <p class="text-green-700 text-xs mt-1">Customer has been notified via WhatsApp</p>
+            </div>
+            {% endif %}
+
+            <!-- Status Tracker -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
                 <h2 class="font-black text-lg uppercase tracking-tight mb-6">Update Status</h2>
 
-                <!-- Status Tracker -->
                 <div class="space-y-3 mb-8">
-                    {% set statuses = ['pending', 'packed', 'shipped', 'delivered'] %}
-                    {% set labels = ['Order Placed', 'Packed', 'Shipped', 'Delivered'] %}
-                    {% set icons = ['📋', '📦', '🚀', '✅'] %}
-                    {% for i in range(4) %}
+                    {% set statuses = ['pending', 'processing', 'packed', 'shipped', 'delivered'] %}
+                    {% set labels = ['Order Placed', 'Processing', 'Packed', 'Shipped', 'Delivered'] %}
+                    {% set icons = ['📋', '⚙️', '📦', '🚀', '✅'] %}
+                    {% for i in range(5) %}
                     <div class="flex items-center gap-3 p-3 rounded-xl
                         {% if order.order_status == statuses[i] %}bg-black text-white
                         {% elif loop.index0 < statuses.index(order.order_status) %}bg-green-50 text-green-700
@@ -150,10 +191,11 @@
                     <input type="hidden" name="next" value="{{ url_for('admin.order_detail', order_id=order.id) }}">
                     <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Change Status</label>
                     <select name="status" class="w-full border-2 border-gray-100 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-black transition bg-white mb-4">
-                        <option value="pending"   {% if order.order_status == 'pending' %}selected{% endif %}>📋 Pending</option>
-                        <option value="packed"    {% if order.order_status == 'packed' %}selected{% endif %}>📦 Packed</option>
-                        <option value="shipped"   {% if order.order_status == 'shipped' %}selected{% endif %}>🚀 Shipped</option>
-                        <option value="delivered" {% if order.order_status == 'delivered' %}selected{% endif %}>✅ Delivered</option>
+                        <option value="pending"    {% if order.order_status == 'pending' %}selected{% endif %}>📋 Pending</option>
+                        <option value="processing" {% if order.order_status == 'processing' %}selected{% endif %}>⚙️ Processing</option>
+                        <option value="packed"     {% if order.order_status == 'packed' %}selected{% endif %}>📦 Packed</option>
+                        <option value="shipped"    {% if order.order_status == 'shipped' %}selected{% endif %}>🚀 Shipped</option>
+                        <option value="delivered"  {% if order.order_status == 'delivered' %}selected{% endif %}>✅ Delivered</option>
                     </select>
                     <button type="submit"
                             class="w-full bg-black text-white font-black text-xs py-4 rounded-xl uppercase tracking-widest hover:bg-gray-800 transition">
